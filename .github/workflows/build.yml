@@ -1,0 +1,41 @@
+name: Build MicroPython BSP
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  isp1807:
+    name: ISP1807-LR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install ARM build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            gcc-arm-none-eabi \
+            libnewlib-arm-none-eabi \
+            python3 \
+            unzip \
+            wget
+
+      - name: Build ISP1807-LR
+        run: python3 scripts/build.py isp1807
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: isp1807-lr-micropython
+          path: |
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.hex
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.bin
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.elf
+          if-no-files-found: error

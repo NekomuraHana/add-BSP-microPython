@@ -1,0 +1,16 @@
+{
+    "editor.formatOnSave": true,
+    "[python]": {
+        "files.encoding": "utf8",
+        "diffEditor.ignoreTrimWhitespace": false,
+        "editor.defaultColorDecorators": "never",
+        "editor.formatOnType": true,
+        "editor.wordBasedSuggestions": "off",
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false
+    },
+    "[markdown]": {
+        "files.encoding": "utf8"
+    }
+}

@@ -14,3 +14,8 @@ LD_FILES += $(BOARD_DIR)/isp1807_breakout_bootloader.ld
 NRF_DEFINES += -DNRF52840_XXAA
 
 MICROPY_VFS_LFS2 = 1
+
+# The upstream nRF _boot.py mounts internal flash at /flash. Use a board-local
+# boot script that mounts it at / so generic MicroPython host tools can upload
+# files using absolute paths such as /main.py.
+FROZEN_MANIFEST ?= $(BOARD_DIR)/manifest.py

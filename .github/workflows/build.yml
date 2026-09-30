@@ -68,6 +68,18 @@ jobs:
           python3 scripts/verify_isp1807_firmware.py \
             micropython/ports/nrf/build-ISP1807_LR-s140/firmware.bin
 
+      - name: Build UF2 image
+        run: |
+          python3 micropython/tools/uf2conv.py \
+            -c \
+            -f 0xADA52840 \
+            -o micropython/ports/nrf/build-ISP1807_LR-s140/firmware.uf2 \
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.hex
+
+          python3 micropython/tools/uf2conv.py \
+            -i \
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.uf2
+
       - name: Build serial DFU package
         run: |
           python3 -m pip install --user adafruit-nrfutil
@@ -89,5 +101,6 @@ jobs:
             micropython/ports/nrf/build-ISP1807_LR-s140/firmware.hex
             micropython/ports/nrf/build-ISP1807_LR-s140/firmware.bin
             micropython/ports/nrf/build-ISP1807_LR-s140/firmware.elf
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.uf2
             micropython/ports/nrf/build-ISP1807_LR-s140/firmware-dfu.zip
           if-no-files-found: error

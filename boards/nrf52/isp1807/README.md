@@ -59,12 +59,18 @@ CI produces both raw debugger images and a serial-DFU package:
 firmware.hex
 firmware.bin
 firmware.elf
+firmware.uf2
 firmware-dfu.zip
 ```
 
 For a board that still has the Switch Science/Adafruit-compatible bootloader,
-prefer `firmware-dfu.zip`. Serial DFU updates the bootloader's application
-metadata as part of the normal update flow.
+`firmware.uf2` is the easiest image for drag-and-drop installation through
+the UF2 mass-storage bootloader. The CI converts the built HEX with
+MicroPython's own `tools/uf2conv.py` using the nRF52840 family ID
+`0xADA52840`.
+
+`firmware-dfu.zip` remains available for serial DFU. Serial DFU updates the
+bootloader's application metadata as part of the normal update flow.
 
 A raw `firmware.hex` is useful for SWD/J-Link development, but replacing only
 the application flash while retaining old bootloader settings can leave the

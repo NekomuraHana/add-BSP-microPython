@@ -43,14 +43,25 @@ def ensure_micropython() -> None:
 
 
 def stage_nrf_board(board_dir: Path, board_name: str) -> Path:
+    """Copy BSP build assets into the upstream nRF board directory."""
     target = MICROPYTHON / "ports" / "nrf" / "boards" / board_name
-    target.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+
+    ignored = {"board.toml", "README.md"}
+    for src in board_dir.iterdir():
+        if src.name in ignored:
+            continue
+        dst = target / src.name
+        if src.is_dir():
+            shutil.copytree(src, dst)
+        else:
+            shutil.copy2(src, dst)
 
     for name in ("mpconfigboard.h", "mpconfigboard.mk", "pins.csv"):
-        src = board_dir / name
-        if not src.is_file():
-            raise SystemExit(f"Missing BSP file: {src}")
-        shutil.copy2(src, target / name)
+        if not (target / name).is_file():
+            raise SystemExit(f"Missing staged BSP file: {target / name}")
 
     return target
 

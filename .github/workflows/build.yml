@@ -16,16 +16,10 @@ jobs:
         with:
           submodules: true
 
-      - name: Install ARM build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            gcc-arm-none-eabi \
-            libnewlib-arm-none-eabi \
-            python3 \
-            unzip \
-            wget
+      # Use the same ARM toolchain setup as the upstream MicroPython nRF CI.
+      - name: Setup official MicroPython nRF build environment
+        working-directory: micropython
+        run: ./tools/ci.sh nrf_setup
 
       - name: Build ISP1807-LR
         run: python3 scripts/build.py isp1807

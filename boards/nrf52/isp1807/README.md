@@ -1,37 +1,47 @@
-# ISP1807-LR BSP
+# Switch Science ISP1807 Breakout BSP
 
-Initial MicroPython BSP for the Insight SiP ISP1807-LR module.
+MicroPython BSP for the Switch Science ISP1807 development/breakout board using
+the Insight SiP ISP1807-LR (nRF52840) module.
 
-## Hardware basis
+The initial hardware target is the USB Type-C board (SSCI-064545). The older
+Micro-B board uses the same ISP1807 breakout design and should share the same
+MCU-side mappings.
 
-- SoC: Nordic Semiconductor nRF52840
-- Flash: 1 MB
-- RAM: 256 kB
-- Integrated 32 MHz and 32.768 kHz crystals
-- Integrated RF matching, antenna, and DC/DC support components
-- 46 module GPIOs
-- USB D+/D-/VBUS are exposed
-- NFC pins are P0.09 / P0.10
+## Console
 
-The module does not expose nRF52840 P0.00 or P0.01. Accordingly, the
-MicroPython pin table starts at software pin P2.
+The MicroPython REPL is configured for the board's native USB connector using
+USB CDC.
 
-For the nRF port, software pins P0-P31 correspond to nRF P0.00-P0.31,
-and P32-P47 correspond to nRF P1.00-P1.15.
+Hardware UART is still available to Python applications through
+`machine.UART(0, ...)`, but it is deliberately not attached to the REPL.
 
-## Initial peripheral defaults
+## Board mappings
 
-Because ISP1807-LR is a module rather than a complete carrier board,
-UART and SPI routing are not physically fixed. This BSP currently uses:
+- User LED: P0.06, active-low
+- User button: P1.06
+- UART RX: P0.25
+- UART TX: P0.11
+- SPI0 SCK: P0.14
+- SPI0 MOSI: P0.10
+- SPI0 MISO: P0.12
+- NFC: P0.09 / P0.10
 
-- UART0 RX: P0.08
-- UART0 TX: P0.06
-- UART hardware flow control: disabled
-- SPI0 SCK: P1.15
-- SPI0 MOSI: P1.13
-- SPI0 MISO: P1.14
+The pin names follow the nRF port convention: P0-P31 map to nRF P0.00-P0.31
+and P32-P47 map to nRF P1.00-P1.15.
 
-Carrier-board-specific BSPs can override these mappings later.
+## Bootloader / flash layout
+
+The Switch Science board ships with an Adafruit-compatible bootloader and S140
+6.1.1. The application area starts at 0x26000 and must end before 0xED000.
+
+This BSP reserves 0xED000-0x100000 so MicroPython's ROMFS/LittleFS regions
+cannot overlap the pre-installed bootloader and settings pages.
+
+Important: an earlier revision of this BSP did not reserve this flash tail.
+Booting that revision could allow filesystem initialisation to touch the
+bootloader region. If a board no longer enters the pre-installed bootloader
+after testing the older image, restore the Switch Science bootloader before
+continuing.
 
 ## Build
 
@@ -42,4 +52,15 @@ git submodule update --init
 python3 scripts/build.py isp1807
 ```
 
-The default build includes the S140 SoftDevice.
+The build uses S140 6.1.1 and produces:
+
+```text
+micropython/ports/nrf/build-ISP1807_LR-s140/
+├─ firmware.hex
+├─ firmware.bin
+└─ firmware.elf
+```
+
+The generated `firmware.hex` is the MicroPython application image. It assumes
+the board already has the matching S140/bootloader environment supplied by
+Switch Science.

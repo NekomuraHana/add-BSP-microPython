@@ -9,7 +9,6 @@ on:
       - "boards/nrf52/isp1807/**"
       - "scripts/verify_isp1807_firmware.py"
       - "scripts/verify_isp1807_uf2.py"
-      - "scripts/verify_isp1807_uf2.py"
       - "micropython"
 
   # PR branches are built by pull_request above. Build pushes only after they
@@ -21,6 +20,7 @@ on:
       - ".github/workflows/build.yml"
       - "boards/nrf52/isp1807/**"
       - "scripts/verify_isp1807_firmware.py"
+      - "scripts/verify_isp1807_uf2.py"
       - "micropython"
 
 jobs:
@@ -47,6 +47,8 @@ jobs:
              boards/nrf52/isp1807/mpconfigboard.mk \
              boards/nrf52/isp1807/pins.csv \
              boards/nrf52/isp1807/isp1807_breakout_bootloader.ld \
+             boards/nrf52/isp1807/manifest.py \
+             boards/nrf52/isp1807/_boot.py \
              micropython/ports/nrf/boards/ISP1807_LR/
 
       - name: Download S140 SoftDevice

@@ -8,6 +8,8 @@ on:
       - ".github/workflows/build.yml"
       - "boards/nrf52/isp1807/**"
       - "scripts/verify_isp1807_firmware.py"
+      - "scripts/verify_isp1807_uf2.py"
+      - "scripts/verify_isp1807_uf2.py"
       - "micropython"
 
   # PR branches are built by pull_request above. Build pushes only after they
@@ -76,8 +78,7 @@ jobs:
             -o micropython/ports/nrf/build-ISP1807_LR-s140/firmware.uf2 \
             micropython/ports/nrf/build-ISP1807_LR-s140/firmware.hex
 
-          python3 micropython/tools/uf2conv.py \
-            -i \
+          python3 scripts/verify_isp1807_uf2.py \
             micropython/ports/nrf/build-ISP1807_LR-s140/firmware.uf2
 
       - name: Build serial DFU package

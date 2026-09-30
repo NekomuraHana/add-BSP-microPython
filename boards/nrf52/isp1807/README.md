@@ -51,6 +51,19 @@ This BSP reserves 0xED000-0x100000 so MicroPython's ROMFS/LittleFS regions do
 not extend into the top-of-flash bootloader/settings area used by this board
 family.
 
+## Filesystem
+
+Internal flash uses LittleFS2.
+
+The upstream MicroPython nRF port mounts its internal flash filesystem at
+`/flash`. This BSP uses a board-specific frozen `_boot.py` and mounts the same
+flash block device at `/` instead. This makes absolute file paths such as
+`/main.py` work with generic MicroPython host tools, including MicroPico's
+`Upload File to Board` command.
+
+The filesystem storage region itself is unchanged; only the VFS mount point is
+changed for this board.
+
 ## Firmware outputs
 
 CI produces both raw debugger images and a serial-DFU package:

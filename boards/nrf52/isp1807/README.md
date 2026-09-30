@@ -12,6 +12,14 @@ MCU-side mappings.
 The MicroPython REPL is configured for the board's native USB connector using
 USB CDC.
 
+USB identity follows the Switch Science board definition:
+
+- VID: `0x2786`
+- PID: `0x920D`
+- Manufacturer: `Switch Science`
+- Product: `ISP1807 Breakout`
+- CDC interface: `MicroPython REPL`
+
 Hardware UART is still available to Python applications through
 `machine.UART(0, ...)`, but it is deliberately not attached to the REPL.
 
@@ -43,7 +51,10 @@ bootloader region. If a board no longer enters the pre-installed bootloader
 after testing the older image, restore the Switch Science bootloader before
 continuing.
 
-## Build
+## Local build
+
+The local helper mirrors the same nRF build sequence used by the CI, but does
+not install the compiler toolchain. Install the ARM GCC toolchain first.
 
 From the repository root:
 
@@ -64,3 +75,18 @@ micropython/ports/nrf/build-ISP1807_LR-s140/
 The generated `firmware.hex` is the MicroPython application image. It assumes
 the board already has the matching S140/bootloader environment supplied by
 Switch Science.
+
+## GitHub Actions
+
+CI deliberately does not call `scripts/build.py`. It follows the upstream
+MicroPython nRF CI pattern directly:
+
+1. `./tools/ci.sh nrf_setup`
+2. stage the ISP1807 board files under `ports/nrf/boards/ISP1807_LR`
+3. download S140 6.1.1
+4. build `mpy-cross`
+5. fetch nRF submodules
+6. run the standard nRF `make BOARD=ISP1807_LR SD=s140`
+
+This keeps CI behaviour close to upstream while retaining `build.py` as a
+developer convenience for local builds.

@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Build supported MicroPython BSP targets."""
+"""Local build helper for BSP targets.
+
+GitHub Actions intentionally does not call this script. CI follows the upstream
+MicroPython nRF CI command sequence directly in .github/workflows/build.yml.
+This helper mirrors that sequence for local development after the toolchain has
+already been installed.
+"""
 
 from __future__ import annotations
 
@@ -67,34 +73,38 @@ def stage_nrf_board(board_dir: Path, board_name: str) -> Path:
 
 
 def build_micropython_nrf(board_dir: Path, config: dict, jobs: int) -> None:
+    """Mirror the relevant commands from upstream ci_nrf_build for one board."""
     board_name = config["micropython_board"]
     softdevice = config.get("softdevice", "")
     softdevice_package = config.get("softdevice_package", "")
 
     stage_nrf_board(board_dir, board_name)
 
-    run(["make", f"-j{jobs}", "-C", str(MICROPYTHON / "mpy-cross")])
-    run(["make", f"-j{jobs}", "-C", str(MICROPYTHON / "ports" / "nrf"), "submodules"])
-
     if softdevice:
         if not softdevice_package:
             raise SystemExit("softdevice_package is required when softdevice is set")
-        run([
-            "bash",
-            str(MICROPYTHON / "ports" / "nrf" / "drivers" / "bluetooth" / "download_ble_stack.sh"),
-            softdevice_package,
-        ])
+        run(
+            [
+                "bash",
+                "ports/nrf/drivers/bluetooth/download_ble_stack.sh",
+                softdevice_package,
+            ],
+            cwd=MICROPYTHON,
+        )
+
+    run(["make", f"-j{jobs}", "-C", "mpy-cross"], cwd=MICROPYTHON)
+    run(["make", f"-j{jobs}", "-C", "ports/nrf", "submodules"], cwd=MICROPYTHON)
 
     cmd = [
         "make",
         f"-j{jobs}",
         "-C",
-        str(MICROPYTHON / "ports" / "nrf"),
+        "ports/nrf",
         f"BOARD={board_name}",
     ]
     if softdevice:
         cmd.append(f"SD={softdevice}")
-    run(cmd)
+    run(cmd, cwd=MICROPYTHON)
 
     suffix = f"-{softdevice.lower()}" if softdevice else ""
     build_dir = MICROPYTHON / "ports" / "nrf" / f"build-{board_name}{suffix}"

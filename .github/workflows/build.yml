@@ -1,9 +1,23 @@
 name: Build MicroPython BSP
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
+
+  pull_request:
+    paths:
+      - ".github/workflows/build.yml"
+      - "boards/nrf52/isp1807/**"
+      - "micropython"
+
+  # PR branches are built by pull_request above. Build pushes only after they
+  # land on main so the same commit is not built twice while a PR is open.
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build.yml"
+      - "boards/nrf52/isp1807/**"
+      - "micropython"
 
 jobs:
   isp1807:
@@ -16,13 +30,39 @@ jobs:
         with:
           submodules: true
 
-      # Use the same ARM toolchain setup as the upstream MicroPython nRF CI.
-      - name: Setup official MicroPython nRF build environment
+      # Same compiler/toolchain setup used by upstream MicroPython nRF CI.
+      - name: Setup nRF build environment
         working-directory: micropython
         run: ./tools/ci.sh nrf_setup
 
+      - name: Stage ISP1807 BSP
+        run: |
+          rm -rf micropython/ports/nrf/boards/ISP1807_LR
+          mkdir -p micropython/ports/nrf/boards/ISP1807_LR
+          cp boards/nrf52/isp1807/mpconfigboard.h \
+             boards/nrf52/isp1807/mpconfigboard.mk \
+             boards/nrf52/isp1807/pins.csv \
+             boards/nrf52/isp1807/isp1807_breakout_bootloader.ld \
+             micropython/ports/nrf/boards/ISP1807_LR/
+
+      - name: Download S140 SoftDevice
+        working-directory: micropython
+        run: ports/nrf/drivers/bluetooth/download_ble_stack.sh s140_nrf52_6_1_1
+
+      - name: Build mpy-cross
+        working-directory: micropython
+        run: make -C mpy-cross -j$(nproc)
+
+      - name: Fetch nRF submodules
+        working-directory: micropython
+        run: make -C ports/nrf submodules -j$(nproc)
+
       - name: Build ISP1807-LR
-        run: python3 scripts/build.py isp1807
+        working-directory: micropython
+        run: make -C ports/nrf BOARD=ISP1807_LR SD=s140 -j$(nproc)
+
+      - name: Show firmware
+        run: ls -lh micropython/ports/nrf/build-ISP1807_LR-s140/
 
       - name: Upload firmware
         uses: actions/upload-artifact@v4

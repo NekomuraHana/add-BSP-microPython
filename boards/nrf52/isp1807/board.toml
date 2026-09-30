@@ -11,6 +11,8 @@ softdevice_package = "s140_nrf52_6_1_1"
 [board]
 tested_product = "SSCI-064545"
 usb_console = true
+usb_vid = 0x2786
+usb_pid = 0x920D
 bootloader_start = 0xED000
 user_led = "P0.06"
 user_button = "P1.06"

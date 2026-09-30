@@ -34,13 +34,11 @@
 #define MICROPY_HW_USB_CDC           (1)
 #define MICROPY_HW_ENABLE_UART_REPL  (0)
 
-// Keep the application CDC identity distinct from the pre-installed
-// Switch Science / Adafruit-compatible bootloader. This makes it obvious
-// whether the running device is the MicroPython application or the bootloader.
-#define MICROPY_HW_USB_VID                 (0xf055)
-#define MICROPY_HW_USB_PID                 (0x9802)
-#define MICROPY_HW_USB_MANUFACTURER_STRING "MicroPython"
-#define MICROPY_HW_USB_PRODUCT_FS_STRING   "ISP1807 MicroPython REPL"
+// Match the USB identity assigned to the Switch Science ISP1807 Breakout.
+#define MICROPY_HW_USB_VID                  (0x2786)
+#define MICROPY_HW_USB_PID                  (0x920d)
+#define MICROPY_HW_USB_MANUFACTURER_STRING  "Switch Science"
+#define MICROPY_HW_USB_PRODUCT_FS_STRING    "ISP1807 Breakout"
 #define MICROPY_HW_USB_CDC_INTERFACE_STRING "MicroPython REPL"
 
 // On-board green user LED: P0.06, active-low.

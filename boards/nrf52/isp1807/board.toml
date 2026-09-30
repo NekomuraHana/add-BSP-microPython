@@ -1,0 +1,29 @@
+id = "isp1807"
+name = "Switch Science ISP1807 Breakout"
+vendor = "Switch Science"
+family = "nrf52"
+soc = "nrf52840"
+backend = "micropython-nrf"
+micropython_board = "ISP1807_LR"
+softdevice = "s140"
+softdevice_package = "s140_nrf52_6_1_1"
+
+[board]
+tested_product = "SSCI-064545"
+usb_console = true
+usb_vid = 0x2786
+usb_pid = 0x920D
+bootloader_start = 0xED000
+user_led = "P0.06"
+user_button = "P1.06"
+
+[module]
+name = "ISP1807-LR"
+vendor = "Insight SiP"
+flash_bytes = 1048576
+ram_bytes = 262144
+gpio_count = 46
+has_usb = true
+has_nfc = true
+hfclk = "32 MHz crystal (integrated)"
+lfclk = "32.768 kHz crystal (integrated)"

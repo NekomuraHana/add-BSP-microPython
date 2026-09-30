@@ -1,0 +1,109 @@
+name: Build MicroPython BSP
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    paths:
+      - ".github/workflows/build.yml"
+      - "boards/nrf52/isp1807/**"
+      - "scripts/verify_isp1807_firmware.py"
+      - "scripts/verify_isp1807_uf2.py"
+      - "micropython"
+
+  # PR branches are built by pull_request above. Build pushes only after they
+  # land on main so the same commit is not built twice while a PR is open.
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build.yml"
+      - "boards/nrf52/isp1807/**"
+      - "scripts/verify_isp1807_firmware.py"
+      - "scripts/verify_isp1807_uf2.py"
+      - "micropython"
+
+jobs:
+  isp1807:
+    name: ISP1807-LR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      # Same compiler/toolchain setup used by upstream MicroPython nRF CI.
+      - name: Setup nRF build environment
+        working-directory: micropython
+        run: ./tools/ci.sh nrf_setup
+
+      - name: Stage ISP1807 BSP
+        run: |
+          rm -rf micropython/ports/nrf/boards/ISP1807_LR
+          mkdir -p micropython/ports/nrf/boards/ISP1807_LR
+          cp boards/nrf52/isp1807/mpconfigboard.h \
+             boards/nrf52/isp1807/mpconfigboard.mk \
+             boards/nrf52/isp1807/pins.csv \
+             boards/nrf52/isp1807/isp1807_breakout_bootloader.ld \
+             boards/nrf52/isp1807/manifest.py \
+             boards/nrf52/isp1807/_boot.py \
+             micropython/ports/nrf/boards/ISP1807_LR/
+
+      - name: Download S140 SoftDevice
+        working-directory: micropython
+        run: ports/nrf/drivers/bluetooth/download_ble_stack.sh s140_nrf52_6_1_1
+
+      - name: Build mpy-cross
+        working-directory: micropython
+        run: make -C mpy-cross -j$(nproc)
+
+      - name: Fetch nRF submodules
+        working-directory: micropython
+        run: make -C ports/nrf submodules -j$(nproc)
+
+      - name: Build ISP1807-LR
+        working-directory: micropython
+        run: make -C ports/nrf BOARD=ISP1807_LR SD=s140 -j$(nproc)
+
+      - name: Verify firmware layout and USB descriptor
+        run: |
+          python3 scripts/verify_isp1807_firmware.py \
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.bin
+
+      - name: Build UF2 image
+        run: |
+          python3 micropython/tools/uf2conv.py \
+            -c \
+            -f 0xADA52840 \
+            -o micropython/ports/nrf/build-ISP1807_LR-s140/firmware.uf2 \
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.hex
+
+          python3 scripts/verify_isp1807_uf2.py \
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.uf2
+
+      - name: Build serial DFU package
+        run: |
+          python3 -m pip install --user adafruit-nrfutil
+          export PATH="$HOME/.local/bin:$PATH"
+          adafruit-nrfutil dfu genpkg \
+            --dev-type 0x0052 \
+            --sd-req 0xB6 \
+            --application micropython/ports/nrf/build-ISP1807_LR-s140/firmware.hex \
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware-dfu.zip
+
+      - name: Show firmware
+        run: ls -lh micropython/ports/nrf/build-ISP1807_LR-s140/
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: isp1807-lr-micropython
+          path: |
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.hex
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.bin
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.elf
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.uf2
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware-dfu.zip
+          if-no-files-found: error

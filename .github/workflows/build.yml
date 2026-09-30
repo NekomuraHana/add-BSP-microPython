@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/build.yml"
       - "boards/nrf52/isp1807/**"
+      - "scripts/verify_isp1807_firmware.py"
       - "micropython"
 
   # PR branches are built by pull_request above. Build pushes only after they
@@ -17,6 +18,7 @@ on:
     paths:
       - ".github/workflows/build.yml"
       - "boards/nrf52/isp1807/**"
+      - "scripts/verify_isp1807_firmware.py"
       - "micropython"
 
 jobs:
@@ -61,6 +63,21 @@ jobs:
         working-directory: micropython
         run: make -C ports/nrf BOARD=ISP1807_LR SD=s140 -j$(nproc)
 
+      - name: Verify firmware layout and USB descriptor
+        run: |
+          python3 scripts/verify_isp1807_firmware.py \
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware.bin
+
+      - name: Build serial DFU package
+        run: |
+          python3 -m pip install --user adafruit-nrfutil
+          export PATH="$HOME/.local/bin:$PATH"
+          adafruit-nrfutil dfu genpkg \
+            --dev-type 0x0052 \
+            --sd-req 0xB6 \
+            --application micropython/ports/nrf/build-ISP1807_LR-s140/firmware.hex \
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware-dfu.zip
+
       - name: Show firmware
         run: ls -lh micropython/ports/nrf/build-ISP1807_LR-s140/
 
@@ -72,4 +89,5 @@ jobs:
             micropython/ports/nrf/build-ISP1807_LR-s140/firmware.hex
             micropython/ports/nrf/build-ISP1807_LR-s140/firmware.bin
             micropython/ports/nrf/build-ISP1807_LR-s140/firmware.elf
+            micropython/ports/nrf/build-ISP1807_LR-s140/firmware-dfu.zip
           if-no-files-found: error

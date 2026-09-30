@@ -12,13 +12,17 @@ MCU-side mappings.
 The MicroPython REPL is configured for the board's native USB connector using
 USB CDC.
 
-USB identity follows the Switch Science board definition:
+USB identity follows the official Switch Science Arduino board definition:
 
 - VID: `0x2786`
 - PID: `0x920D`
-- Manufacturer: `Switch Science`
-- Product: `ISP1807 Breakout`
+- Manufacturer: `Switch Science, Inc.`
+- Product: `SSCI ISP1807 Breakout`
 - CDC interface: `MicroPython REPL`
+
+Note that VID/PID alone should not be used to distinguish the bootloader from
+the application. The board's software ecosystem can use the board-assigned USB
+identity in both contexts.
 
 Hardware UART is still available to Python applications through
 `machine.UART(0, ...)`, but it is deliberately not attached to the REPL.
@@ -39,22 +43,46 @@ and P32-P47 map to nRF P1.00-P1.15.
 
 ## Bootloader / flash layout
 
-The Switch Science board ships with an Adafruit-compatible bootloader and S140
-6.1.1. The application area starts at 0x26000 and must end before 0xED000.
+The Switch Science board uses an Adafruit-compatible serial DFU bootloader and
+S140 6.1.1. The MicroPython application starts at 0x26000 and the current BSP
+keeps the application below 0xED000.
 
-This BSP reserves 0xED000-0x100000 so MicroPython's ROMFS/LittleFS regions
-cannot overlap the pre-installed bootloader and settings pages.
+This BSP reserves 0xED000-0x100000 so MicroPython's ROMFS/LittleFS regions do
+not extend into the top-of-flash bootloader/settings area used by this board
+family.
 
-Important: an earlier revision of this BSP did not reserve this flash tail.
-Booting that revision could allow filesystem initialisation to touch the
-bootloader region. If a board no longer enters the pre-installed bootloader
-after testing the older image, restore the Switch Science bootloader before
-continuing.
+## Firmware outputs
+
+CI produces both raw debugger images and a serial-DFU package:
+
+```text
+firmware.hex
+firmware.bin
+firmware.elf
+firmware-dfu.zip
+```
+
+For a board that still has the Switch Science/Adafruit-compatible bootloader,
+prefer `firmware-dfu.zip`. Serial DFU updates the bootloader's application
+metadata as part of the normal update flow.
+
+A raw `firmware.hex` is useful for SWD/J-Link development, but replacing only
+the application flash while retaining old bootloader settings can leave the
+bootloader's stored application metadata inconsistent with the new image.
+
+Example serial DFU command after entering the bootloader:
+
+```bash
+adafruit-nrfutil dfu serial \
+  --package firmware-dfu.zip \
+  -p <serial-port> \
+  -b 115200
+```
 
 ## Local build
 
-The local helper mirrors the same nRF build sequence used by the CI, but does
-not install the compiler toolchain. Install the ARM GCC toolchain first.
+The local helper mirrors the nRF build sequence used by CI, but does not install
+the compiler toolchain.
 
 From the repository root:
 
@@ -63,30 +91,9 @@ git submodule update --init
 python3 scripts/build.py isp1807
 ```
 
-The build uses S140 6.1.1 and produces:
-
-```text
-micropython/ports/nrf/build-ISP1807_LR-s140/
-├─ firmware.hex
-├─ firmware.bin
-└─ firmware.elf
-```
-
-The generated `firmware.hex` is the MicroPython application image. It assumes
-the board already has the matching S140/bootloader environment supplied by
-Switch Science.
-
 ## GitHub Actions
 
-CI deliberately does not call `scripts/build.py`. It follows the upstream
-MicroPython nRF CI pattern directly:
-
-1. `./tools/ci.sh nrf_setup`
-2. stage the ISP1807 board files under `ports/nrf/boards/ISP1807_LR`
-3. download S140 6.1.1
-4. build `mpy-cross`
-5. fetch nRF submodules
-6. run the standard nRF `make BOARD=ISP1807_LR SD=s140`
-
-This keeps CI behaviour close to upstream while retaining `build.py` as a
-developer convenience for local builds.
+CI follows the upstream MicroPython nRF build pattern directly. It also runs
+`scripts/verify_isp1807_firmware.py` against the generated binary so a build
+fails if the vector table, application bounds, USB VID/PID, or expected USB
+strings are not actually present in the firmware.

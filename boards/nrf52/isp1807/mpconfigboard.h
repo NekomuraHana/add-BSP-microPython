@@ -34,11 +34,12 @@
 #define MICROPY_HW_USB_CDC           (1)
 #define MICROPY_HW_ENABLE_UART_REPL  (0)
 
-// Match the USB identity assigned to the Switch Science ISP1807 Breakout.
+// Match the USB identity used by the official Switch Science Arduino board
+// definition for SSCI ISP1807 Breakout.
 #define MICROPY_HW_USB_VID                  (0x2786)
-#define MICROPY_HW_USB_PID                  (0x920d)
-#define MICROPY_HW_USB_MANUFACTURER_STRING  "Switch Science"
-#define MICROPY_HW_USB_PRODUCT_FS_STRING    "ISP1807 Breakout"
+#define MICROPY_HW_USB_PID                  (0x920D)
+#define MICROPY_HW_USB_MANUFACTURER_STRING  "Switch Science, Inc."
+#define MICROPY_HW_USB_PRODUCT_FS_STRING    "SSCI ISP1807 Breakout"
 #define MICROPY_HW_USB_CDC_INTERFACE_STRING "MicroPython REPL"
 
 // On-board green user LED: P0.06, active-low.

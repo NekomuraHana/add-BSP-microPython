@@ -15,7 +15,7 @@ diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
          { MP_QSTR_timeout, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
          { MP_QSTR_timeout_char, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
      };
-@@ -255,6 +257,17 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
+@@ -255,6 +257,18 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
      int uart_id = uart_find(args[ARG_id].u_obj);
      machine_uart_obj_t *self = &machine_uart_obj[uart_id];
  

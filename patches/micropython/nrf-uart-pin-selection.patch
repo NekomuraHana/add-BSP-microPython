@@ -1,7 +1,7 @@
 diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
 --- a/ports/nrf/modules/machine/uart.c
 +++ b/ports/nrf/modules/machine/uart.c
-@@ -240,10 +240,12 @@ static void mp_machine_uart_init_helper(machine_uart_obj_t *self, size_t n_args,
+@@ -241,10 +241,12 @@ static void mp_machine_uart_init_helper(machine_uart_obj_t *self, size_t n_args,
  //   - `id`is bus id.
  //   - `baudrate` is the clock rate.
  static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
@@ -15,7 +15,7 @@ diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
          { MP_QSTR_timeout, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
          { MP_QSTR_timeout_char, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
      };
-@@ -255,6 +257,18 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
+@@ -257,6 +259,18 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
      int uart_id = uart_find(args[ARG_id].u_obj);
      machine_uart_obj_t *self = &machine_uart_obj[uart_id];
  
@@ -34,7 +34,7 @@ diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
      nrfx_uart_config_t config;
      memset(&config, 0, sizeof(config));
  
-@@ -295,8 +308,8 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
+@@ -298,8 +312,8 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
      config.baudrate = (config.baudrate + 0x800) & 0xffffff000; // rounding
  
      #if NRFX_UART_ENABLED
@@ -45,7 +45,7 @@ diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
      #if MICROPY_HW_UART1_HWFC
      config.pselrts = MICROPY_HW_UART1_RTS;
      config.pselcts = MICROPY_HW_UART1_CTS;
-@@ -306,8 +319,8 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
+@@ -308,8 +322,8 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
      config.pselcts = NRF_UART_PSEL_DISCONNECTED;
      #endif
      #else

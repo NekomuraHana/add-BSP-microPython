@@ -49,6 +49,10 @@
 #define MICROPY_HW_LED1              (6)
 #define HELP_TEXT_BOARD_LED          "1"
 
+// nRF52840 provides UARTE0 and UARTE1. The upstream nRF port enables both
+// drivers, while its machine.UART binding exposes only one instance by default.
+#define MICROPY_HW_UART_COUNT        (2)
+
 // UART mapping follows the Switch Science ISP1807 Breakout board definition.
 // RX=P0.25, TX=P0.11. Hardware flow control is not wired on the board.
 #define MICROPY_HW_UART1_RX          (25)

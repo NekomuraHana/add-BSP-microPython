@@ -1,7 +1,7 @@
 diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
 --- a/ports/nrf/modules/machine/uart.c
 +++ b/ports/nrf/modules/machine/uart.c
-@@ -117,11 +117,23 @@ typedef struct _machine_uart_obj_t {
+@@ -117,10 +117,24 @@ typedef struct _machine_uart_obj_t {
      #endif
  } machine_uart_obj_t;
  
@@ -27,14 +27,14 @@ diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
  };
  
  void uart_init0(void) {
-@@ -231,7 +243,8 @@ static void mp_machine_uart_print(const mp_print_t *print, mp_obj_t self_in, mp_
+@@ -230,4 +244,5 @@ static void mp_machine_uart_print(const mp_print_t *print, mp_obj_t self_in, mp_
 -    mp_printf(print, "UART(0)");
 +    machine_uart_obj_t *self = MP_OBJ_TO_PTR(self_in);
 +    mp_printf(print, "UART(%u)", (unsigned int)self->uart_id);
  }
  
  static void mp_machine_uart_init_helper(machine_uart_obj_t *self, size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-@@ -241,10 +254,12 @@ static void mp_machine_uart_init_helper(machine_uart_obj_t *self, size_t n_args,
+@@ -241,10 +256,12 @@ static void mp_machine_uart_init_helper(machine_uart_obj_t *self, size_t n_args,
  //   - `id`is bus id.
  //   - `baudrate` is the clock rate.
  static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
@@ -48,7 +48,7 @@ diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
          { MP_QSTR_timeout, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
          { MP_QSTR_timeout_char, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
      };
-@@ -257,6 +272,18 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
+@@ -257,6 +274,18 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
      int uart_id = uart_find(args[ARG_id].u_obj);
      machine_uart_obj_t *self = &machine_uart_obj[uart_id];
  
@@ -67,7 +67,7 @@ diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
      nrfx_uart_config_t config;
      memset(&config, 0, sizeof(config));
  
-@@ -298,8 +325,8 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
+@@ -298,8 +327,8 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
      config.baudrate = (config.baudrate + 0x800) & 0xffffff000; // rounding
  
      #if NRFX_UART_ENABLED
@@ -78,7 +78,7 @@ diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
      #if MICROPY_HW_UART1_HWFC
      config.pselrts = MICROPY_HW_UART1_RTS;
      config.pselcts = MICROPY_HW_UART1_CTS;
-@@ -308,8 +335,8 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
+@@ -308,8 +337,8 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
      config.pselcts = NRF_UART_PSEL_DISCONNECTED;
      #endif
      #else
@@ -89,7 +89,7 @@ diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
      #if MICROPY_HW_UART1_HWFC
      config.rts_pin = MICROPY_HW_UART1_RTS;
      config.cts_pin = MICROPY_HW_UART1_CTS;
-@@ -481,4 +508,4 @@ static mp_uint_t mp_machine_uart_ioctl(mp_obj_t self_in, mp_uint_t request, uint
+@@ -530,4 +559,4 @@ static mp_uint_t mp_machine_uart_ioctl(mp_obj_t self_in, mp_uint_t request, uint
      return MP_STREAM_ERROR;
  }
  

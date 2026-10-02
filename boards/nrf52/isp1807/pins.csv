@@ -44,3 +44,8 @@ P44,P44
 P45,P45
 P46,P46
 P47,P47
+
+# Board aliases
+LED,P6
+TX,P11
+RX,P25

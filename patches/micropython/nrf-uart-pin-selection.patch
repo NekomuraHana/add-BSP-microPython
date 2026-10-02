@@ -1,0 +1,58 @@
+diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
+--- a/ports/nrf/modules/machine/uart.c
++++ b/ports/nrf/modules/machine/uart.c
+@@ -241,10 +241,12 @@ static void mp_machine_uart_init_helper(machine_uart_obj_t *self, size_t n_args,
+ //   - `id`is bus id.
+ //   - `baudrate` is the clock rate.
+ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
+-    enum { ARG_id, ARG_baudrate, ARG_timeout, ARG_timeout_char };
++    enum { ARG_id, ARG_baudrate, ARG_tx, ARG_rx, ARG_timeout, ARG_timeout_char };
+     static const mp_arg_t allowed_args[] = {
+         { MP_QSTR_id,       MP_ARG_REQUIRED | MP_ARG_OBJ },
+         { MP_QSTR_baudrate, MP_ARG_REQUIRED | MP_ARG_INT, {.u_int = 9600} },
++        { MP_QSTR_tx, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
++        { MP_QSTR_rx, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
+         { MP_QSTR_timeout, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
+         { MP_QSTR_timeout_char, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
+     };
+@@ -257,6 +259,18 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
+     int uart_id = uart_find(args[ARG_id].u_obj);
+     machine_uart_obj_t *self = &machine_uart_obj[uart_id];
+ 
++    // Use the board defaults unless the caller explicitly selects pins.
++    uint32_t tx_pin = MICROPY_HW_UART1_TX;
++    uint32_t rx_pin = MICROPY_HW_UART1_RX;
++    if (args[ARG_tx].u_obj != mp_const_none) {
++        const pin_obj_t *pin = pin_find(args[ARG_tx].u_obj);
++        tx_pin = pin->pin;
++    }
++    if (args[ARG_rx].u_obj != mp_const_none) {
++        const pin_obj_t *pin = pin_find(args[ARG_rx].u_obj);
++        rx_pin = pin->pin;
++    }
++
+     nrfx_uart_config_t config;
+     memset(&config, 0, sizeof(config));
+ 
+@@ -298,8 +312,8 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
+     config.baudrate = (config.baudrate + 0x800) & 0xffffff000; // rounding
+ 
+     #if NRFX_UART_ENABLED
+-    config.pseltxd = MICROPY_HW_UART1_TX;
+-    config.pselrxd = MICROPY_HW_UART1_RX;
++    config.pseltxd = tx_pin;
++    config.pselrxd = rx_pin;
+     #if MICROPY_HW_UART1_HWFC
+     config.pselrts = MICROPY_HW_UART1_RTS;
+     config.pselcts = MICROPY_HW_UART1_CTS;
+@@ -308,8 +322,8 @@ static mp_obj_t mp_machine_uart_make_new(const mp_obj_type_t *type, size_t n_arg
+     config.pselcts = NRF_UART_PSEL_DISCONNECTED;
+     #endif
+     #else
+-    config.txd_pin = MICROPY_HW_UART1_TX;
+-    config.rxd_pin = MICROPY_HW_UART1_RX;
++    config.txd_pin = tx_pin;
++    config.rxd_pin = rx_pin;
+     #if MICROPY_HW_UART1_HWFC
+     config.rts_pin = MICROPY_HW_UART1_RTS;
+     config.cts_pin = MICROPY_HW_UART1_CTS;

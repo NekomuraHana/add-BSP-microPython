@@ -20,11 +20,46 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MICROPYTHON = ROOT / "micropython"
 BOARDS_ROOT = ROOT / "boards"
+MICROPYTHON_PATCHES = (
+    ROOT / "patches" / "micropython" / "nrf-uart-pin-selection.patch",
+)
 
 
 def run(cmd: list[str], cwd: Path | None = None) -> None:
     print("+", " ".join(cmd), flush=True)
     subprocess.run(cmd, cwd=cwd, check=True)
+
+
+def apply_micropython_patches() -> None:
+    """Apply repository-maintained MicroPython patches once."""
+    for patch in MICROPYTHON_PATCHES:
+        if not patch.is_file():
+            raise SystemExit(f"Missing MicroPython patch: {patch}")
+
+        check = subprocess.run(
+            ["git", "apply", "--check", str(patch)],
+            cwd=MICROPYTHON,
+            capture_output=True,
+            text=True,
+        )
+        if check.returncode == 0:
+            run(["git", "apply", str(patch)], cwd=MICROPYTHON)
+            continue
+
+        reverse_check = subprocess.run(
+            ["git", "apply", "--reverse", "--check", str(patch)],
+            cwd=MICROPYTHON,
+            capture_output=True,
+            text=True,
+        )
+        if reverse_check.returncode == 0:
+            print(f"+ patch already applied: {patch.relative_to(ROOT)}", flush=True)
+            continue
+
+        detail = check.stderr.strip() or check.stdout.strip()
+        raise SystemExit(
+            f"MicroPython patch does not apply cleanly: {patch}\n{detail}"
+        )
 
 
 def find_board(board_id: str) -> tuple[Path, dict]:
@@ -78,6 +113,7 @@ def build_micropython_nrf(board_dir: Path, config: dict, jobs: int) -> None:
     softdevice = config.get("softdevice", "")
     softdevice_package = config.get("softdevice_package", "")
 
+    apply_micropython_patches()
     stage_nrf_board(board_dir, board_name)
 
     if softdevice:

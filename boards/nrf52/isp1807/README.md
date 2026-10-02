@@ -41,6 +41,28 @@ Hardware UART is still available to Python applications through
 The pin names follow the nRF port convention: P0-P31 map to nRF P0.00-P0.31
 and P32-P47 map to nRF P1.00-P1.15.
 
+Board aliases are also provided:
+
+- `LED` -> P0.06
+- `TX` -> P0.11
+- `RX` -> P0.25
+
+For example, the on-board LED can be opened with
+`Pin("LED", Pin.OUT)`.
+
+UART keeps P0.11/P0.25 as the board defaults, while the repository's nRF UART
+patch also allows applications to select other exposed GPIOs:
+
+```python
+from machine import Pin, UART
+
+# Board defaults: TX=P0.11, RX=P0.25
+uart = UART(0, 115200)
+
+# Override the UART routing when another pair of exposed GPIOs is needed.
+uart = UART(0, 115200, tx=Pin(13), rx=Pin(14))
+```
+
 ## Bootloader / flash layout
 
 The Switch Science board uses an Adafruit-compatible serial DFU bootloader and
@@ -109,6 +131,9 @@ From the repository root:
 git submodule update --init
 python3 scripts/build.py isp1807
 ```
+
+The local helper applies the repository-maintained MicroPython patches before
+building. Re-running the helper is safe when those patches are already applied.
 
 ## GitHub Actions
 

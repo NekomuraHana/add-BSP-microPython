@@ -9,6 +9,7 @@ on:
       - "boards/nrf52/isp1807/**"
       - "scripts/verify_isp1807_firmware.py"
       - "scripts/verify_isp1807_uf2.py"
+      - "patches/micropython/**"
       - "micropython"
 
   # PR branches are built by pull_request above. Build pushes only after they
@@ -21,6 +22,7 @@ on:
       - "boards/nrf52/isp1807/**"
       - "scripts/verify_isp1807_firmware.py"
       - "scripts/verify_isp1807_uf2.py"
+      - "patches/micropython/**"
       - "micropython"
 
 jobs:
@@ -35,6 +37,10 @@ jobs:
           submodules: true
 
       # Same compiler/toolchain setup used by upstream MicroPython nRF CI.
+      - name: Apply MicroPython patches
+        working-directory: micropython
+        run: git apply ../patches/micropython/nrf-uart-pin-selection.patch
+
       - name: Setup nRF build environment
         working-directory: micropython
         run: ./tools/ci.sh nrf_setup

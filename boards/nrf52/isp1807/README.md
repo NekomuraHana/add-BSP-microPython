@@ -24,8 +24,9 @@ Note that VID/PID alone should not be used to distinguish the bootloader from
 the application. The board's software ecosystem can use the board-assigned USB
 identity in both contexts.
 
-Hardware UART is still available to Python applications through
-`machine.UART(0, ...)`, but it is deliberately not attached to the REPL.
+Hardware UART remains available to Python applications through
+`machine.UART(0, ...)` and `machine.UART(1, ...)`, but neither instance is
+attached to the REPL.
 
 ## Board mappings
 
@@ -50,18 +51,28 @@ Board aliases are also provided:
 For example, the on-board LED can be opened with
 `Pin("LED", Pin.OUT)`.
 
-UART keeps P0.11/P0.25 as the board defaults, while the repository's nRF UART
-patch also allows applications to select other exposed GPIOs:
+UART0 keeps P0.11/P0.25 as the board defaults, while the repository's nRF UART
+patch also allows applications to select other exposed GPIOs. The same patch
+exposes the nRF52840's second UARTE peripheral as `UART(1)`.
 
 ```python
 from machine import Pin, UART
 
-# Board defaults: TX=P0.11, RX=P0.25
-uart = UART(0, 115200)
+# UART0 board defaults: TX=P0.11, RX=P0.25
+uart0 = UART(0, 115200)
 
-# Override the UART routing when another pair of exposed GPIOs is needed.
-uart = UART(0, 115200, tx=Pin(13), rx=Pin(14))
+# Override UART0 routing when another pair of exposed GPIOs is needed.
+uart0 = UART(0, 115200, tx=Pin(13), rx=Pin(14))
+
+# UARTE1 is also available. Select its pins explicitly so it does not reuse
+# UART0's board-default routing.
+uart1 = UART(1, 115200, tx=Pin(15), rx=Pin(16))
 ```
+
+The nRF52840 hardware already provides UARTE0/UARTE1 and the upstream nrfx
+configuration enables both. The repository patch only extends MicroPython's nRF
+`machine.UART` binding so its object table and IRQ roots can represent both
+instances.
 
 ## Bootloader / flash layout
 

@@ -3,6 +3,7 @@
 Use only against a test peripheral whose writable characteristic is known.
 Set TARGET_ADDR and WRITE_UUID, and explicitly opt in to writing.
 For loopback, set NOTIFY_UUID and a verified CCCD_HANDLE.
+The test refuses to write before the notification subscription succeeds.
 CCCD_HANDLE must come from a GATT descriptor inspector, not handle + 1.
 """
 import time
@@ -12,9 +13,9 @@ TARGET_ADDR = "d0:ef:3b:c9:9b:55"
 WRITE_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"  # NUS RX (peripheral)
 NOTIFY_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"  # NUS TX (peripheral)
 WRITE_DATA = b"isp1807-test"
-ENABLE_WRITE = False
+ENABLE_WRITE = True
 WITH_RESPONSE = True
-CCCD_HANDLE = None  # Optional verified descriptor handle (UUID 0x2902)
+CCCD_HANDLE = None  # REQUIRED: externally verified TX CCCD (UUID 0x2902)
 WAIT_NOTIFY_MS = 3000
 
 PROP_READ = 0x02
@@ -74,14 +75,6 @@ def main():
     if NOTIFY_UUID and notify_target is None:
         raise ValueError("NOTIFY_UUID not discovered")
 
-    if props & PROP_READ:
-        try:
-            print("READ before:", bytes(central.readHandle(handle)))
-        except Exception as exc:
-            print("READ before failed:", repr(exc))
-    else:
-        print("READ skipped (property not advertised)")
-
     if not ENABLE_WRITE:
         print("WRITE disabled. Review the target and set ENABLE_WRITE=True.")
         return
@@ -90,34 +83,31 @@ def main():
     if len(WRITE_DATA) > 20:
         raise ValueError("This firmware limits GATT writes to 20 bytes")
 
+    if CCCD_HANDLE is None:
+        print("Set CCCD_HANDLE from an external GATT descriptor discovery; WRITE not attempted.")
+        return
+    if notify_target is None or not (notify_target[1] & PROP_NOTIFY):
+        raise ValueError("Selected TX characteristic does not advertise Notify")
+
     received = []
-    if CCCD_HANDLE is not None:
-        if notify_target is None or not (notify_target[1] & PROP_NOTIFY):
-            raise ValueError("Characteristic does not advertise Notify")
 
-        def on_notify(value_handle, data):
-            if value_handle == notify_target[0]:
-                received.append(bytes(data))
-                print("NOTIFY", value_handle, bytes(data))
+    def on_notify(value_handle, data):
+        if value_handle == notify_target[0]:
+            received.append(bytes(data))
+            print("NOTIFY", value_handle, bytes(data))
 
-        central.setNotificationHandler(on_notify)
-        central.writeHandle(CCCD_HANDLE, bytes((1, 0)), True)
-        print("Notifications enabled using verified CCCD", CCCD_HANDLE)
-
-    central.writeHandle(handle, WRITE_DATA, WITH_RESPONSE)
-    print("WRITE sent:", WRITE_DATA, "with_response=", WITH_RESPONSE)
-
-    if props & PROP_READ:
-        try:
-            print("READ after:", bytes(central.readHandle(handle)))
-        except Exception as exc:
-            print("READ after failed:", repr(exc))
-    if CCCD_HANDLE is not None:
+    central.setNotificationHandler(on_notify)
+    # Subscribe first; do not transmit if enabling notifications fails.
+    central.writeHandle(CCCD_HANDLE, bytes((1, 0)), True)
+    print("CCCD enabled:", CCCD_HANDLE)
+    try:
+        central.writeHandle(handle, WRITE_DATA, WITH_RESPONSE)
+        print("WRITE sent:", WRITE_DATA, "with_response=", WITH_RESPONSE)
         time.sleep_ms(WAIT_NOTIFY_MS)
         print("LOOPBACK:", "PASS" if WRITE_DATA in received else "NO MATCH")
-        # Best effort to disable notify; disconnect API is unavailable in this port.
+    finally:
         central.writeHandle(CCCD_HANDLE, bytes((0, 0)), True)
-        print("Notifications disabled")
+        print("CCCD disabled")
 
 
 main()

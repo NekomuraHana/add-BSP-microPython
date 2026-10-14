@@ -5,7 +5,7 @@ Connections (3.3 V logic, common ground):
   Peripheral RX <- ISP1807 P0.08 (TX)  [not used by this test]
   Peripheral GND -- ISP1807 GND
 
-No CCCD, Notify, or GATT Read is involved in the transfer check.
+GATT Read checks only the peripheral UART settings. No CCCD or Notify.
 The peer must bridge received NUS data to its UART TX.
 """
 import time
@@ -13,6 +13,7 @@ from machine import Pin, UART
 from ubluepy import Peripheral, Scanner
 
 TARGET_ADDR = "d0:ef:3b:c9:9b:55"
+READ_UUID = "0bf10001-7dfb-4e4a-b734-f40d695f67ab"  # Peripheral UART settings (read-only test)
 WRITE_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"  # Peripheral NUS RX
 WRITE_DATA = b"isp1807-test"
 WITH_RESPONSE = True
@@ -21,6 +22,7 @@ UART_BAUD = 115200
 UART_TX_PIN = 8
 UART_RX_PIN = 7
 UART_TIMEOUT_MS = 3000
+PROP_READ = 0x02
 PROP_WRITE_NO_RSP = 0x04
 PROP_WRITE = 0x08
 
@@ -88,7 +90,13 @@ def main():
     central = Peripheral()
     central.connect(found.addr(), addr_type=found.addr_type())
     print("CONNECTED")
-    target = discover_characteristics(central).get(WRITE_UUID.lower())
+    database = discover_characteristics(central)
+    read_target = database.get(READ_UUID.lower())
+    if read_target is None or not (read_target[1] & PROP_READ):
+        raise ValueError("UART settings characteristic missing or not readable")
+    settings = bytes(central.readHandle(read_target[0]))
+    print("GATT READ UART settings:", settings, "handle", read_target[0])
+    target = database.get(WRITE_UUID.lower())
     if target is None:
         raise ValueError("NUS RX UUID not found")
     value_handle, properties = target

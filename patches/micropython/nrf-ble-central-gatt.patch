@@ -1,0 +1,197 @@
+diff --git a/ports/nrf/modules/ubluepy/ubluepy_peripheral.c b/ports/nrf/modules/ubluepy/ubluepy_peripheral.c
+--- a/ports/nrf/modules/ubluepy/ubluepy_peripheral.c
++++ b/ports/nrf/modules/ubluepy/ubluepy_peripheral.c
+@@ -30,11 +30,12 @@
+ #include "py/objstr.h"
+ #include "py/objlist.h"
+ 
+ #if MICROPY_PY_UBLUEPY
+ 
+ #include "ble_drv.h"
++#include "ble.h"
+ 
+ static void ubluepy_peripheral_print(const mp_print_t *print, mp_obj_t o, mp_print_kind_t kind) {
+     ubluepy_peripheral_obj_t * self = (ubluepy_peripheral_obj_t *)o;
+     (void)self;
+     mp_printf(print, "Peripheral(conn_handle: " HEX2_FMT ")",
+@@ -92,12 +93,18 @@
+ 
+ static volatile bool m_disc_evt_received;
+ 
+ static void gattc_event_handler(mp_obj_t self_in, uint16_t event_id, uint16_t attr_handle, uint16_t length, uint8_t * data) {
+     ubluepy_peripheral_obj_t *self = MP_OBJ_TO_PTR(self_in);
+-    (void)self;
++    if (event_id == BLE_GATTC_EVT_HVX && self->notif_handler != mp_const_none) {
++        mp_obj_t args[2] = {
++            MP_OBJ_NEW_SMALL_INT(attr_handle),
++            mp_obj_new_bytes(data, length),
++        };
++        mp_call_function_n_kw(self->notif_handler, 2, 0, args);
++    }
+     m_disc_evt_received = true;
+ }
+ #endif
+ 
+ static mp_obj_t ubluepy_peripheral_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
+     enum {
+@@ -293,12 +300,13 @@
+ 
+     ubluepy_uuid_obj_t * p_uuid = mp_obj_malloc(ubluepy_uuid_obj_t, &ubluepy_uuid_type);
+ 
+     p_service->p_uuid = p_uuid;
+ 
+-    p_uuid->type = p_service_data->uuid_type;
++    p_uuid->type = p_service_data->uuid_type == BLE_UUID_TYPE_BLE ? UBLUEPY_UUID_16_BIT : UBLUEPY_UUID_128_BIT;
++    p_uuid->uuid_vs_idx = p_service_data->uuid_type;
+     p_uuid->value[0] = p_service_data->uuid & 0xFF;
+     p_uuid->value[1] = p_service_data->uuid >> 8;
+ 
+     p_service->handle       = p_service_data->start_handle;
+     p_service->start_handle = p_service_data->start_handle;
+     p_service->end_handle   = p_service_data->end_handle;
+@@ -314,12 +322,13 @@
+ 
+     ubluepy_uuid_obj_t * p_uuid = mp_obj_malloc(ubluepy_uuid_obj_t, &ubluepy_uuid_type);
+ 
+     p_char->p_uuid = p_uuid;
+ 
+-    p_uuid->type = p_desc_data->uuid_type;
++    p_uuid->type = p_desc_data->uuid_type == BLE_UUID_TYPE_BLE ? UBLUEPY_UUID_16_BIT : UBLUEPY_UUID_128_BIT;
++    p_uuid->uuid_vs_idx = p_desc_data->uuid_type;
+     p_uuid->value[0] = p_desc_data->uuid & 0xFF;
+     p_uuid->value[1] = p_desc_data->uuid >> 8;
+ 
+     // add characteristic specific data from discovery
+     p_char->props  = p_desc_data->props;
+     p_char->handle = p_desc_data->value_handle;
+@@ -438,20 +447,39 @@
+     }
+ 
+     return mp_const_none;
+ }
+ static MP_DEFINE_CONST_FUN_OBJ_KW(ubluepy_peripheral_connect_obj, 2, peripheral_connect);
+ 
+-#endif
+-
+-static const mp_rom_map_elem_t ubluepy_peripheral_locals_dict_table[] = {
+-    { MP_ROM_QSTR(MP_QSTR_withDelegate),           MP_ROM_PTR(&ubluepy_peripheral_with_delegate_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_setNotificationHandler), MP_ROM_PTR(&ubluepy_peripheral_set_notif_handler_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_setConnectionHandler),   MP_ROM_PTR(&ubluepy_peripheral_set_conn_handler_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_getServices),            MP_ROM_PTR(&ubluepy_peripheral_get_services_obj) },
+-#if MICROPY_PY_UBLUEPY_CENTRAL
+-    { MP_ROM_QSTR(MP_QSTR_connect),                MP_ROM_PTR(&ubluepy_peripheral_connect_obj) },
++// Write a GATT attribute by handle (including a known CCCD handle).
++static mp_obj_t peripheral_write_handle(size_t n_args, const mp_obj_t *args) {
++    ubluepy_peripheral_obj_t *self = MP_OBJ_TO_PTR(args[0]);
++    if (self->conn_handle == 0xFFFF) {
++        mp_raise_ValueError(MP_ERROR_TEXT("Not connected"));
++    }
++    mp_buffer_info_t buf;
++    mp_get_buffer_raise(args[2], &buf, MP_BUFFER_READ);
++    if (buf.len > 20) {
++        mp_raise_ValueError(MP_ERROR_TEXT("Legacy ATT write limited to 20 bytes"));
++    }
++    ble_drv_attr_c_write(self->conn_handle, mp_obj_get_int(args[1]),
++                         buf.len, buf.buf, n_args == 4 ? mp_obj_is_true(args[3]) : true);
++    return mp_const_none;
++}
++static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(ubluepy_peripheral_write_handle_obj, 3, 4, peripheral_write_handle);
++
++
++#endif
++
++static const mp_rom_map_elem_t ubluepy_peripheral_locals_dict_table[] = {
++    { MP_ROM_QSTR(MP_QSTR_withDelegate),           MP_ROM_PTR(&ubluepy_peripheral_with_delegate_obj) },
++    { MP_ROM_QSTR(MP_QSTR_setNotificationHandler), MP_ROM_PTR(&ubluepy_peripheral_set_notif_handler_obj) },
++    { MP_ROM_QSTR(MP_QSTR_setConnectionHandler),   MP_ROM_PTR(&ubluepy_peripheral_set_conn_handler_obj) },
++    { MP_ROM_QSTR(MP_QSTR_getServices),            MP_ROM_PTR(&ubluepy_peripheral_get_services_obj) },
++#if MICROPY_PY_UBLUEPY_CENTRAL
++    { MP_ROM_QSTR(MP_QSTR_connect),                MP_ROM_PTR(&ubluepy_peripheral_connect_obj) },
++    { MP_ROM_QSTR(MP_QSTR_writeHandle),            MP_ROM_PTR(&ubluepy_peripheral_write_handle_obj) },
+ #if 0
+     { MP_ROM_QSTR(MP_QSTR_disconnect),             MP_ROM_PTR(&ubluepy_peripheral_disconnect_obj) },
+     { MP_ROM_QSTR(MP_QSTR_getServiceByUUID),       MP_ROM_PTR(&ubluepy_peripheral_get_service_by_uuid_obj) },
+     { MP_ROM_QSTR(MP_QSTR_getCharacteristics),     MP_ROM_PTR(&ubluepy_peripheral_get_chars_obj) },
+     { MP_ROM_QSTR(MP_QSTR_getDescriptors),         MP_ROM_PTR(&ubluepy_peripheral_get_descs_obj) },
+diff --git a/ports/nrf/modules/ubluepy/ubluepy_uuid.c b/ports/nrf/modules/ubluepy/ubluepy_uuid.c
+--- a/ports/nrf/modules/ubluepy/ubluepy_uuid.c
++++ b/ports/nrf/modules/ubluepy/ubluepy_uuid.c
+@@ -127,11 +127,12 @@
+     } else if (mp_obj_is_type(uuid_obj, &ubluepy_uuid_type)) {
+         // deep copy instance
+         ubluepy_uuid_obj_t * p_old = MP_OBJ_TO_PTR(uuid_obj);
+         s->type     = p_old->type;
+         s->value[0] = p_old->value[0];
+         s->value[1] = p_old->value[1];
++        s->uuid_vs_idx = p_old->uuid_vs_idx;
+     } else {
+         mp_raise_ValueError(MP_ERROR_TEXT("Invalid UUID parameter"));
+     }
+ 
+     return MP_OBJ_FROM_PTR(s);
+diff --git a/ports/nrf/modules/ubluepy/ubluepy_characteristic.c b/ports/nrf/modules/ubluepy/ubluepy_characteristic.c
+--- a/ports/nrf/modules/ubluepy/ubluepy_characteristic.c
++++ b/ports/nrf/modules/ubluepy/ubluepy_characteristic.c
+@@ -171,25 +171,31 @@
+ ///
+ static mp_obj_t char_uuid(mp_obj_t self_in) {
+     ubluepy_characteristic_obj_t * self = MP_OBJ_TO_PTR(self_in);
+     return MP_OBJ_FROM_PTR(self->p_uuid);
+ }
+ static MP_DEFINE_CONST_FUN_OBJ_1(ubluepy_characteristic_get_uuid_obj, char_uuid);
+ 
+ 
+-static const mp_rom_map_elem_t ubluepy_characteristic_locals_dict_table[] = {
+-    { MP_ROM_QSTR(MP_QSTR_read),                MP_ROM_PTR(&ubluepy_characteristic_read_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_write),               MP_ROM_PTR(&ubluepy_characteristic_write_obj) },
+-#if 0
+-    { MP_ROM_QSTR(MP_QSTR_supportsRead),        MP_ROM_PTR(&ubluepy_characteristic_supports_read_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_propertiesToString),  MP_ROM_PTR(&ubluepy_characteristic_properties_to_str_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_getHandle),           MP_ROM_PTR(&ubluepy_characteristic_get_handle_obj) },
+-
++// Return the discovered GATT value handle.
++static mp_obj_t char_get_handle(mp_obj_t self_in) {
++    ubluepy_characteristic_obj_t *self = MP_OBJ_TO_PTR(self_in);
++    return MP_OBJ_NEW_SMALL_INT(self->handle);
++}
++static MP_DEFINE_CONST_FUN_OBJ_1(ubluepy_characteristic_get_handle_obj, char_get_handle);
++
++static const mp_rom_map_elem_t ubluepy_characteristic_locals_dict_table[] = {
++    { MP_ROM_QSTR(MP_QSTR_read),                MP_ROM_PTR(&ubluepy_characteristic_read_obj) },
++    { MP_ROM_QSTR(MP_QSTR_getHandle),           MP_ROM_PTR(&ubluepy_characteristic_get_handle_obj) },
++    { MP_ROM_QSTR(MP_QSTR_write),               MP_ROM_PTR(&ubluepy_characteristic_write_obj) },
++#if 0
++    { MP_ROM_QSTR(MP_QSTR_supportsRead),        MP_ROM_PTR(&ubluepy_characteristic_supports_read_obj) },
++    { MP_ROM_QSTR(MP_QSTR_propertiesToString),  MP_ROM_PTR(&ubluepy_characteristic_properties_to_str_obj) },
+     // Properties
+     { MP_ROM_QSTR(MP_QSTR_peripheral),          MP_ROM_PTR(&ubluepy_characteristic_get_peripheral_obj) },
+ #endif
+     { MP_ROM_QSTR(MP_QSTR_uuid),                MP_ROM_PTR(&ubluepy_characteristic_get_uuid_obj) },
+     { MP_ROM_QSTR(MP_QSTR_properties),          MP_ROM_PTR(&ubluepy_characteristic_get_properties_obj) },
+ 
+     { MP_ROM_QSTR(MP_QSTR_PROP_BROADCAST),      MP_ROM_INT(UBLUEPY_PROP_BROADCAST) },
+     { MP_ROM_QSTR(MP_QSTR_PROP_READ),           MP_ROM_INT(UBLUEPY_PROP_READ) },
+     { MP_ROM_QSTR(MP_QSTR_PROP_WRITE_WO_RESP),  MP_ROM_INT(UBLUEPY_PROP_WRITE_WO_RESP) },
+diff --git a/ports/nrf/drivers/bluetooth/ble_drv.c b/ports/nrf/drivers/bluetooth/ble_drv.c
+--- a/ports/nrf/drivers/bluetooth/ble_drv.c
++++ b/ports/nrf/drivers/bluetooth/ble_drv.c
+@@ -1120,13 +1120,19 @@
+         case BLE_GATTC_EVT_WRITE_RSP:
+             BLE_DRIVER_LOG("BLE EVT WRITE RESPONSE\n");
+             m_write_done = true;
+             break;
+ 
+         case BLE_GATTC_EVT_HVX:
+             BLE_DRIVER_LOG("BLE EVT HVX RESPONSE\n");
++            if (gattc_event_handler != NULL) {
++                gattc_event_handler(mp_gattc_observer, BLE_GATTC_EVT_HVX,
++                                   p_ble_evt->evt.gattc_evt.params.hvx.handle,
++                                   p_ble_evt->evt.gattc_evt.params.hvx.len,
++                                   p_ble_evt->evt.gattc_evt.params.hvx.data);
++            }
+             break;
+ 
+         case BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST:
+             BLE_DRIVER_LOG("GATTS EVT EXCHANGE MTU REQUEST\n");
+             (void)sd_ble_gatts_exchange_mtu_reply(p_ble_evt->evt.gatts_evt.conn_handle, 23); // MAX MTU size
+             break;

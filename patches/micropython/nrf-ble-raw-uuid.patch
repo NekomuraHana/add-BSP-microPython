@@ -1,0 +1,85 @@
+diff --git a/ports/nrf/modules/ubluepy/modubluepy.h b/ports/nrf/modules/ubluepy/modubluepy.h
+--- a/ports/nrf/modules/ubluepy/modubluepy.h
++++ b/ports/nrf/modules/ubluepy/modubluepy.h
+@@ -119,7 +119,8 @@
+     volatile uint16_t   conn_handle;
+     mp_obj_t            delegate;
+     mp_obj_t            notif_handler;
+-    mp_obj_t            conn_handler;
++    mp_obj_t            conn_handler;
++    mp_obj_t            raw_read_result;
+     mp_obj_t            service_list;
+ } ubluepy_peripheral_obj_t;
+ 
+diff --git a/ports/nrf/modules/ubluepy/ubluepy_peripheral.c b/ports/nrf/modules/ubluepy/ubluepy_peripheral.c
+--- a/ports/nrf/modules/ubluepy/ubluepy_peripheral.c
++++ b/ports/nrf/modules/ubluepy/ubluepy_peripheral.c
+@@ -124,7 +124,8 @@
+     ubluepy_peripheral_obj_t *s = mp_obj_malloc(ubluepy_peripheral_obj_t, type);
+ 
+     s->delegate      = mp_const_none;
+-    s->conn_handler  = mp_const_none;
++    s->conn_handler  = mp_const_none;
++    s->raw_read_result = mp_const_none;
+     s->notif_handler = mp_const_none;
+     s->conn_handle   = 0xFFFF;
+ 
+@@ -465,7 +466,25 @@
+                          buf.len, buf.buf, n_args == 4 ? mp_obj_is_true(args[3]) : true);
+     return mp_const_none;
+ }
+-static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(ubluepy_peripheral_write_handle_obj, 3, 4, peripheral_write_handle);
++static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(ubluepy_peripheral_write_handle_obj, 3, 4, peripheral_write_handle);
++
++// Read arbitrary ATT attribute (service / characteristic declarations included).
++static void raw_read_completed(mp_obj_t observer, uint16_t len, uint8_t *data) {
++    ubluepy_peripheral_obj_t *self = MP_OBJ_TO_PTR(observer);
++    self->raw_read_result = mp_obj_new_bytes(data, len);
++}
++
++static mp_obj_t peripheral_read_handle(mp_obj_t self_in, mp_obj_t handle_in) {
++    ubluepy_peripheral_obj_t *self = MP_OBJ_TO_PTR(self_in);
++    if (self->conn_handle == 0xFFFF) {
++        mp_raise_ValueError(MP_ERROR_TEXT("Not connected"));
++    }
++    self->raw_read_result = mp_const_none;
++    ble_drv_attr_c_read(self->conn_handle, mp_obj_get_int(handle_in),
++                        self_in, raw_read_completed);
++    return self->raw_read_result;
++}
++static MP_DEFINE_CONST_FUN_OBJ_2(ubluepy_peripheral_read_handle_obj, peripheral_read_handle);
+ 
+ 
+ #endif
+@@ -477,7 +496,8 @@
+     { MP_ROM_QSTR(MP_QSTR_getServices),            MP_ROM_PTR(&ubluepy_peripheral_get_services_obj) },
+ #if MICROPY_PY_UBLUEPY_CENTRAL
+     { MP_ROM_QSTR(MP_QSTR_connect),                MP_ROM_PTR(&ubluepy_peripheral_connect_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_writeHandle),            MP_ROM_PTR(&ubluepy_peripheral_write_handle_obj) },
++    { MP_ROM_QSTR(MP_QSTR_writeHandle),            MP_ROM_PTR(&ubluepy_peripheral_write_handle_obj) },
++    { MP_ROM_QSTR(MP_QSTR_readHandle),             MP_ROM_PTR(&ubluepy_peripheral_read_handle_obj) },
+ #if 0
+     { MP_ROM_QSTR(MP_QSTR_disconnect),             MP_ROM_PTR(&ubluepy_peripheral_disconnect_obj) },
+     { MP_ROM_QSTR(MP_QSTR_getServiceByUUID),       MP_ROM_PTR(&ubluepy_peripheral_get_service_by_uuid_obj) },
+diff --git a/ports/nrf/modules/ubluepy/ubluepy_service.c b/ports/nrf/modules/ubluepy/ubluepy_service.c
+--- a/ports/nrf/modules/ubluepy/ubluepy_service.c
++++ b/ports/nrf/modules/ubluepy/ubluepy_service.c
+@@ -157,10 +157,18 @@
+ static MP_DEFINE_CONST_FUN_OBJ_1(ubluepy_service_get_uuid_obj, service_uuid);
+ 
++// Primary Service Declaration lives at the start handle.
++static mp_obj_t service_start_handle(mp_obj_t self_in) {
++    ubluepy_service_obj_t *self = MP_OBJ_TO_PTR(self_in);
++    return MP_OBJ_NEW_SMALL_INT(self->start_handle);
++}
++static MP_DEFINE_CONST_FUN_OBJ_1(ubluepy_service_start_handle_obj, service_start_handle);
++
+ static const mp_rom_map_elem_t ubluepy_service_locals_dict_table[] = {
+     { MP_ROM_QSTR(MP_QSTR_getCharacteristic),  MP_ROM_PTR(&ubluepy_service_get_char_obj) },
+     { MP_ROM_QSTR(MP_QSTR_addCharacteristic),  MP_ROM_PTR(&ubluepy_service_add_char_obj) },
+     { MP_ROM_QSTR(MP_QSTR_getCharacteristics), MP_ROM_PTR(&ubluepy_service_get_chars_obj) },
++    { MP_ROM_QSTR(MP_QSTR_getStartHandle),       MP_ROM_PTR(&ubluepy_service_start_handle_obj) },
+ #if 0
+     // Properties
+     { MP_ROM_QSTR(MP_QSTR_peripheral), MP_ROM_PTR(&ubluepy_service_get_peripheral_obj) },
+ #endif

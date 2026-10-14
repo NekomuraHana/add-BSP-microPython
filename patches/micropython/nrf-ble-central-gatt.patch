@@ -44,6 +44,43 @@ diff --git a/ports/nrf/modules/ubluepy/ubluepy_peripheral.c b/ports/nrf/modules/
 +    p_uuid->value[0] = p_desc_data->uuid & 0xFF;
      p_uuid->value[1] = p_desc_data->uuid >> 8;
  
+@@ -441,4 +452,22 @@
+-}
+-static MP_DEFINE_CONST_FUN_OBJ_KW(ubluepy_peripheral_connect_obj, 2, peripheral_connect);
+-
+-#endif
++}
++static MP_DEFINE_CONST_FUN_OBJ_KW(ubluepy_peripheral_connect_obj, 2, peripheral_connect);
++
++// Write a GATT attribute by handle (including a known CCCD handle).
++static mp_obj_t peripheral_write_handle(size_t n_args, const mp_obj_t *args) {
++    ubluepy_peripheral_obj_t *self = MP_OBJ_TO_PTR(args[0]);
++    if (self->conn_handle == 0xFFFF) {
++        mp_raise_ValueError(MP_ERROR_TEXT("Not connected"));
++    }
++    mp_buffer_info_t buf;
++    mp_get_buffer_raise(args[2], &buf, MP_BUFFER_READ);
++    if (buf.len > 20) {
++        mp_raise_ValueError(MP_ERROR_TEXT("Legacy ATT write limited to 20 bytes"));
++    }
++    ble_drv_attr_c_write(self->conn_handle, mp_obj_get_int(args[1]),
++                         buf.len, buf.buf, n_args == 4 ? mp_obj_is_true(args[3]) : true);
++    return mp_const_none;
++}
++static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(ubluepy_peripheral_write_handle_obj, 3, 4, peripheral_write_handle);
++
++
++#endif
+@@ -451,4 +480,5 @@
+-#if MICROPY_PY_UBLUEPY_CENTRAL
+-    { MP_ROM_QSTR(MP_QSTR_connect),                MP_ROM_PTR(&ubluepy_peripheral_connect_obj) },
+-#if 0
+-    { MP_ROM_QSTR(MP_QSTR_disconnect),             MP_ROM_PTR(&ubluepy_peripheral_disconnect_obj) },
++#if MICROPY_PY_UBLUEPY_CENTRAL
++    { MP_ROM_QSTR(MP_QSTR_connect),                MP_ROM_PTR(&ubluepy_peripheral_connect_obj) },
++    { MP_ROM_QSTR(MP_QSTR_writeHandle),            MP_ROM_PTR(&ubluepy_peripheral_write_handle_obj) },
++#if 0
++    { MP_ROM_QSTR(MP_QSTR_disconnect),             MP_ROM_PTR(&ubluepy_peripheral_disconnect_obj) },
 diff --git a/ports/nrf/modules/ubluepy/ubluepy_uuid.c b/ports/nrf/modules/ubluepy/ubluepy_uuid.c
 --- a/ports/nrf/modules/ubluepy/ubluepy_uuid.c
 +++ b/ports/nrf/modules/ubluepy/ubluepy_uuid.c

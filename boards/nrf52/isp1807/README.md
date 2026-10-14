@@ -212,3 +212,38 @@ GATT Read.
 There is currently no automatic full-128-bit UUID reconstruction in
 `service.uuid()` / `characteristic.uuid()`. Use the raw declaration route
 for generic 128-bit UUID matching.
+
+
+### Central GATT Read / Write / Notify hardware test
+
+Use [`tests/isp1807_ble_central_gatt_rw.py`](../../../tests/isp1807_ble_central_gatt_rw.py)
+to exercise characteristic value reads and writes on a **controlled test peripheral**.
+This is a hardware test, not a production BLE driver.
+
+1. Set `TARGET_ADDR` to your test peripheral's advertising address.
+2. Run the script once with `TARGET_UUID = None`. It prints characteristic
+   value handles, **raw-declaration UUIDs**, and characteristic properties.
+3. Set `TARGET_UUID` to the UUID of a known test characteristic. If more than
+   one characteristic has that UUID, the test refuses to select one.
+4. Confirm that the characteristic is safe to write, set `WRITE_DATA` (up to
+   20 bytes), then change `ENABLE_WRITE` to `True`.
+5. Run the script again. It tries GATT Read before and after the write only
+   if the characteristic advertises Read. A Read value is **not necessarily**
+   an echo of the written value; verify expected behavior on the peripheral.
+6. For an optional Write -> Notify check, determine the actual CCCD descriptor
+   handle (UUID `0x2902`) using a separate GATT inspector, and set
+   `CCCD_HANDLE`. Never infer the descriptor handle by adding 1 to a value
+   handle. Leave it as `None` for the basic Read/Write test.
+
+`WITH_RESPONSE=True` uses Write Request; `False` uses Write Command.
+The test verifies the corresponding advertised characteristic property
+before writing. A successful write call is **not** proof that the test
+peripheral applied the operation: confirm using Read, Notify, or the
+peripheral's own observable behavior.
+
+If Notify is enabled, the script prints `NOTIFY <value_handle> <data>` during
+the configured wait interval. Notifications are asynchronous; an empty
+notification log does not prove failure unless the peripheral is expected to
+emit a notification for that test input.
+
+Hardware verification of Write and Notify is still pending.

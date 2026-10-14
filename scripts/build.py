@@ -23,6 +23,7 @@ BOARDS_ROOT = ROOT / "boards"
 MICROPYTHON_PATCHES = (
     ROOT / "patches" / "micropython" / "nrf-uart-pin-selection.patch",
     ROOT / "patches" / "micropython" / "nrf-ble-central-gatt.patch",
+    ROOT / "patches" / "micropython" / "nrf-ble-raw-uuid.patch",
 )
 
 

@@ -45,6 +45,8 @@ jobs:
           git apply ../patches/micropython/nrf-ble-central-gatt.patch
           git apply --check ../patches/micropython/nrf-ble-raw-uuid.patch
           git apply ../patches/micropython/nrf-ble-raw-uuid.patch
+          git apply --check ../patches/micropython/nrf-ble-declaration-handle.patch
+          git apply ../patches/micropython/nrf-ble-declaration-handle.patch
 
       - name: Setup nRF build environment
         working-directory: micropython

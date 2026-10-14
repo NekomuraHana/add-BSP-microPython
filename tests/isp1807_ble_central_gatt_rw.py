@@ -1,8 +1,8 @@
 """Test BLE Central NUS Write -> peripheral UART TX -> ISP1807 UART RX.
 
 Connections (3.3 V logic, common ground):
-  Peripheral TX -> ISP1807 P0.07 (RX)
-  Peripheral RX <- ISP1807 P0.08 (TX)  [not used by this test]
+  Peripheral TX -> ISP1807 P0.07 (UART0 RX)
+  Peripheral RX <- ISP1807 P0.08 (UART0 TX)  [not used by this test]
   Peripheral GND -- ISP1807 GND
 
 GATT Read checks only the peripheral UART settings. No CCCD or Notify.
@@ -17,7 +17,7 @@ READ_UUID = "0bf10001-7dfb-4e4a-b734-f40d695f67ab"  # Peripheral UART settings (
 WRITE_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"  # Peripheral NUS RX
 WRITE_DATA = b"isp1807-test"
 WITH_RESPONSE = True
-UART_ID = 1
+UART_ID = 0
 UART_BAUD = 115200
 UART_TX_PIN = 8
 UART_RX_PIN = 7

@@ -214,7 +214,7 @@ There is currently no automatic full-128-bit UUID reconstruction in
 for generic 128-bit UUID matching.
 
 
-### Central GATT Write -> external UART hardware test
+### Central GATT UART settings Read + NUS Write -> external UART test
 
 Run [`tests/isp1807_ble_central_gatt_rw.py`](../../../tests/isp1807_ble_central_gatt_rw.py)
 with a NUS-compatible BLE-to-UART peripheral, such as the Switch Science
@@ -225,8 +225,10 @@ Wiring (check compatible 3.3 V logic and connect grounds):
 - Peripheral UART RX <- ISP1807 P0.08 (UART1 TX; unused in this test)
 - GND <-> GND
 
-The test configures UART1 as 115200 8N1 on P0.08/P0.07. It discovers
-the NUS RX characteristic UUID
+The test configures UART1 as 115200 8N1 on P0.08/P0.07. It uses
+GATT Read on UART-settings UUID `0bf10001-7dfb-4e4a-b734-f40d695f67ab`
+(only reads the settings; never writes or changes persistent configuration).
+It then discovers the NUS RX characteristic UUID
 `6e400002-b5a3-f393-e0a9-e50e24dcca9e`, writes the
 `WRITE_DATA` payload (20 bytes maximum), and collects bytes from the
 ISP1807 UART RX pin. It reports `RESULT: PASS` only when the complete
@@ -234,8 +236,9 @@ UART receive data equals the transmitted BLE payload; otherwise `FAIL`.
 The peripheral must bridge BLE NUS writes onto its hardware UART TX at
 the matching baud rate.
 
-This exercises BLE Central Write Request/Command and the external UART
-receive path; it deliberately does **not** use CCCD or GATT Notify.
+This exercises GATT Read for configuration, BLE Central Write Request/Command
+for the NUS RX characteristic, and the external UART receive path. It deliberately
+does **not** use CCCD or GATT Notify.
 Separate tests are needed for the inverse UART -> BLE Notify direction.
 Avoid writing to the peripheral's UART-configuration UUIDs
 (`0bf10001...` / `0bf10002...`) as settings may persist in flash.

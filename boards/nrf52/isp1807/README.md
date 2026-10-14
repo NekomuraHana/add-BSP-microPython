@@ -216,34 +216,40 @@ for generic 128-bit UUID matching.
 
 ### Central GATT Read / Write / Notify hardware test
 
-Use [`tests/isp1807_ble_central_gatt_rw.py`](../../../tests/isp1807_ble_central_gatt_rw.py)
-to exercise characteristic value reads and writes on a **controlled test peripheral**.
-This is a hardware test, not a production BLE driver.
+Run [`tests/isp1807_ble_central_gatt_rw.py`](../../../tests/isp1807_ble_central_gatt_rw.py)
+against a controlled test peripheral.
 
-1. Set `TARGET_ADDR` to your test peripheral's advertising address.
-2. Run the script once with `TARGET_UUID = None`. It prints characteristic
-   value handles, **raw-declaration UUIDs**, and characteristic properties.
-3. Set `TARGET_UUID` to the UUID of a known test characteristic. If more than
-   one characteristic has that UUID, the test refuses to select one.
-4. Confirm that the characteristic is safe to write, set `WRITE_DATA` (up to
-   20 bytes), then change `ENABLE_WRITE` to `True`.
-5. Run the script again. It tries GATT Read before and after the write only
-   if the characteristic advertises Read. A Read value is **not necessarily**
-   an echo of the written value; verify expected behavior on the peripheral.
-6. For an optional Write -> Notify check, determine the actual CCCD descriptor
-   handle (UUID `0x2902`) using a separate GATT inspector, and set
-   `CCCD_HANDLE`. Never infer the descriptor handle by adding 1 to a value
-   handle. Leave it as `None` for the basic Read/Write test.
+The test discovers value handles by reading and decoding ATT characteristic
+declarations. It creates a UUID-to-(handle, properties) mapping so the
+write destination and notify source are independent.
 
-`WITH_RESPONSE=True` uses Write Request; `False` uses Write Command.
-The test verifies the corresponding advertised characteristic property
-before writing. A successful write call is **not** proof that the test
-peripheral applied the operation: confirm using Read, Notify, or the
-peripheral's own observable behavior.
+For the standard Nordic UART Service (NUS), names are from the
+**peripheral's** perspective:
+- NUS RX `6e400002-b5a3-f393-e0a9-e50e24dcca9e`: Central **writes** here
+  (properties `0x0c`: Write and Write Without Response).
+- NUS TX `6e400003-b5a3-f393-e0a9-e50e24dcca9e`: Central **receives
+  notifications** here (properties `0x10`: Notify; GATT Read is not available).
 
-If Notify is enabled, the script prints `NOTIFY <value_handle> <data>` during
-the configured wait interval. Notifications are asynchronous; an empty
-notification log does not prove failure unless the peripheral is expected to
-emit a notification for that test input.
+Set `WRITE_UUID` and `NOTIFY_UUID` to these or to the corresponding UUIDs
+on another test peripheral. Set `TARGET_ADDR`, then opt in with
+`ENABLE_WRITE=True`. Enable Notify by setting `CCCD_HANDLE` to the
+**verified descriptor handle** for the Notify characteristic (descriptor
+UUID `0x2902`). Inspect the peripheral's GATT descriptors externally;
+never guess `value_handle + 1`. The CCCD is configured **before** writing.
 
-Hardware verification of Write and Notify is still pending.
+With a peripheral that echoes NUS RX data to NUS TX notifications, the test
+compares the received notification payload to `WRITE_DATA` and reports
+`LOOPBACK: PASS` on a match. `NO MATCH` means no matching Notify was
+observed in the test window; it does not necessarily mean the write failed.
+Without a CCCD, the test only exercises the write and cannot validate the
+notification echo.
+
+`WITH_RESPONSE=True` selects Write Request and `False` selects Write
+Command, where supported. The firmware limits each GATT write to 20 bytes.
+Characteristic reads are attempted only when the selected write
+characteristic also advertises Read, and should not be mistaken for a
+loopback receipt on the Notify characteristic.
+
+**Hardware status:** scan, connect, discovery and GATT Read verified; Write
+Request returned without an exception, but peer-side processing and
+Write-to-Notify loopback still need confirmation.

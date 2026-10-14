@@ -58,11 +58,32 @@ diff --git a/ports/nrf/modules/ubluepy/ubluepy_uuid.c b/ports/nrf/modules/ubluep
 diff --git a/ports/nrf/modules/ubluepy/ubluepy_characteristic.c b/ports/nrf/modules/ubluepy/ubluepy_characteristic.c
 --- a/ports/nrf/modules/ubluepy/ubluepy_characteristic.c
 +++ b/ports/nrf/modules/ubluepy/ubluepy_characteristic.c
-@@ -177,5 +177,12 @@
- 
- 
+@@ -174,19 +174,25 @@
+-    return MP_OBJ_FROM_PTR(self->p_uuid);
+-}
+-static MP_DEFINE_CONST_FUN_OBJ_1(ubluepy_characteristic_get_uuid_obj, char_uuid);
+-
+-
 -static const mp_rom_map_elem_t ubluepy_characteristic_locals_dict_table[] = {
-+// Return the discovered GATT attribute value handle.
+-    { MP_ROM_QSTR(MP_QSTR_read),                MP_ROM_PTR(&ubluepy_characteristic_read_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_write),               MP_ROM_PTR(&ubluepy_characteristic_write_obj) },
+-#if 0
+-    { MP_ROM_QSTR(MP_QSTR_supportsRead),        MP_ROM_PTR(&ubluepy_characteristic_supports_read_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_propertiesToString),  MP_ROM_PTR(&ubluepy_characteristic_properties_to_str_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_getHandle),           MP_ROM_PTR(&ubluepy_characteristic_get_handle_obj) },
+-
+-    // Properties
+-    { MP_ROM_QSTR(MP_QSTR_peripheral),          MP_ROM_PTR(&ubluepy_characteristic_get_peripheral_obj) },
+-#endif
+-    { MP_ROM_QSTR(MP_QSTR_uuid),                MP_ROM_PTR(&ubluepy_characteristic_get_uuid_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_properties),          MP_ROM_PTR(&ubluepy_characteristic_get_properties_obj) },
+-
++    return MP_OBJ_FROM_PTR(self->p_uuid);
++}
++static MP_DEFINE_CONST_FUN_OBJ_1(ubluepy_characteristic_get_uuid_obj, char_uuid);
++
++
++// Return the discovered GATT value handle.
 +static mp_obj_t char_get_handle(mp_obj_t self_in) {
 +    ubluepy_characteristic_obj_t *self = MP_OBJ_TO_PTR(self_in);
 +    return MP_OBJ_NEW_SMALL_INT(self->handle);
@@ -70,25 +91,18 @@ diff --git a/ports/nrf/modules/ubluepy/ubluepy_characteristic.c b/ports/nrf/modu
 +static MP_DEFINE_CONST_FUN_OBJ_1(ubluepy_characteristic_get_handle_obj, char_get_handle);
 +
 +static const mp_rom_map_elem_t ubluepy_characteristic_locals_dict_table[] = {
-     { MP_ROM_QSTR(MP_QSTR_read),                MP_ROM_PTR(&ubluepy_characteristic_read_obj) },
-     { MP_ROM_QSTR(MP_QSTR_write),               MP_ROM_PTR(&ubluepy_characteristic_write_obj) },
-@@ -178,5 +185,6 @@
- 
- static const mp_rom_map_elem_t ubluepy_characteristic_locals_dict_table[] = {
--    { MP_ROM_QSTR(MP_QSTR_read),                MP_ROM_PTR(&ubluepy_characteristic_read_obj) },
 +    { MP_ROM_QSTR(MP_QSTR_read),                MP_ROM_PTR(&ubluepy_characteristic_read_obj) },
-+    { MP_ROM_QSTR(MP_QSTR_getHandle),           MP_ROM_PTR(&ubluepy_characteristic_get_handle_obj) }
-     { MP_ROM_QSTR(MP_QSTR_write),               MP_ROM_PTR(&ubluepy_characteristic_write_obj) },
- #if 0
-@@ -183,7 +191,5 @@
-     { MP_ROM_QSTR(MP_QSTR_supportsRead),        MP_ROM_PTR(&ubluepy_characteristic_supports_read_obj) },
-     { MP_ROM_QSTR(MP_QSTR_propertiesToString),  MP_ROM_PTR(&ubluepy_characteristic_properties_to_str_obj) },
--    { MP_ROM_QSTR(MP_QSTR_getHandle),           MP_ROM_PTR(&ubluepy_characteristic_get_handle_obj) },
--
--    // Properties
++    { MP_ROM_QSTR(MP_QSTR_getHandle),           MP_ROM_PTR(&ubluepy_characteristic_get_handle_obj) },
++    { MP_ROM_QSTR(MP_QSTR_write),               MP_ROM_PTR(&ubluepy_characteristic_write_obj) },
++#if 0
++    { MP_ROM_QSTR(MP_QSTR_supportsRead),        MP_ROM_PTR(&ubluepy_characteristic_supports_read_obj) },
++    { MP_ROM_QSTR(MP_QSTR_propertiesToString),  MP_ROM_PTR(&ubluepy_characteristic_properties_to_str_obj) },
 +    // Properties
-     { MP_ROM_QSTR(MP_QSTR_peripheral),          MP_ROM_PTR(&ubluepy_characteristic_get_peripheral_obj) },
- #endif
++    { MP_ROM_QSTR(MP_QSTR_peripheral),          MP_ROM_PTR(&ubluepy_characteristic_get_peripheral_obj) },
++#endif
++    { MP_ROM_QSTR(MP_QSTR_uuid),                MP_ROM_PTR(&ubluepy_characteristic_get_uuid_obj) },
++    { MP_ROM_QSTR(MP_QSTR_properties),          MP_ROM_PTR(&ubluepy_characteristic_get_properties_obj) },
++
 diff --git a/ports/nrf/drivers/bluetooth/ble_drv.c b/ports/nrf/drivers/bluetooth/ble_drv.c
 --- a/ports/nrf/drivers/bluetooth/ble_drv.c
 +++ b/ports/nrf/drivers/bluetooth/ble_drv.c

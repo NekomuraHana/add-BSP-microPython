@@ -92,7 +92,7 @@ def main():
             print("NOTIFY", value_handle, bytes(data))
 
         central.setNotificationHandler(on_notify)
-        central.writeHandle(CCCD_HANDLE, b"\\x01\\x00", True)
+        central.writeHandle(CCCD_HANDLE, bytes((1, 0)), True)
         print("Notifications enabled using verified CCCD", CCCD_HANDLE)
 
     central.writeHandle(handle, WRITE_DATA, WITH_RESPONSE)
@@ -106,7 +106,7 @@ def main():
     if CCCD_HANDLE is not None:
         time.sleep_ms(WAIT_NOTIFY_MS)
         # Best effort to disable notify; disconnect API is unavailable in this port.
-        central.writeHandle(CCCD_HANDLE, b"\\x00\\x00", True)
+        central.writeHandle(CCCD_HANDLE, bytes((0, 0)), True)
         print("Notifications disabled")
 
 

@@ -64,11 +64,28 @@ diff --git a/ports/nrf/modules/ubluepy/ubluepy_peripheral.c b/ports/nrf/modules/
 diff --git a/ports/nrf/modules/ubluepy/ubluepy_service.c b/ports/nrf/modules/ubluepy/ubluepy_service.c
 --- a/ports/nrf/modules/ubluepy/ubluepy_service.c
 +++ b/ports/nrf/modules/ubluepy/ubluepy_service.c
-@@ -156,7 +156,14 @@
- }
- static MP_DEFINE_CONST_FUN_OBJ_1(ubluepy_service_get_uuid_obj, service_uuid);
- 
+@@ -154,16 +154,24 @@
+-    ubluepy_service_obj_t * self = MP_OBJ_TO_PTR(self_in);
+-    return MP_OBJ_FROM_PTR(self->p_uuid);
+-}
+-static MP_DEFINE_CONST_FUN_OBJ_1(ubluepy_service_get_uuid_obj, service_uuid);
+-
 -static const mp_rom_map_elem_t ubluepy_service_locals_dict_table[] = {
+-    { MP_ROM_QSTR(MP_QSTR_getCharacteristic),  MP_ROM_PTR(&ubluepy_service_get_char_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_addCharacteristic),  MP_ROM_PTR(&ubluepy_service_add_char_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_getCharacteristics), MP_ROM_PTR(&ubluepy_service_get_chars_obj) },
+-#if 0
+-    // Properties
+-    { MP_ROM_QSTR(MP_QSTR_peripheral), MP_ROM_PTR(&ubluepy_service_get_peripheral_obj) },
+-#endif
+-    { MP_ROM_QSTR(MP_QSTR_uuid),       MP_ROM_PTR(&ubluepy_service_get_uuid_obj) },
+-    { MP_ROM_QSTR(MP_QSTR_PRIMARY),    MP_ROM_INT(UBLUEPY_SERVICE_PRIMARY) },
+-    { MP_ROM_QSTR(MP_QSTR_SECONDARY),  MP_ROM_INT(UBLUEPY_SERVICE_SECONDARY) },
++    ubluepy_service_obj_t * self = MP_OBJ_TO_PTR(self_in);
++    return MP_OBJ_FROM_PTR(self->p_uuid);
++}
++static MP_DEFINE_CONST_FUN_OBJ_1(ubluepy_service_get_uuid_obj, service_uuid);
++
 +// Primary Service Declaration is located at the discovered start handle.
 +static mp_obj_t service_start_handle(mp_obj_t self_in) {
 +    ubluepy_service_obj_t *self = MP_OBJ_TO_PTR(self_in);
@@ -77,16 +94,14 @@ diff --git a/ports/nrf/modules/ubluepy/ubluepy_service.c b/ports/nrf/modules/ubl
 +static MP_DEFINE_CONST_FUN_OBJ_1(ubluepy_service_start_handle_obj, service_start_handle);
 +
 +static const mp_rom_map_elem_t ubluepy_service_locals_dict_table[] = {
-     { MP_ROM_QSTR(MP_QSTR_getCharacteristic),  MP_ROM_PTR(&ubluepy_service_get_char_obj) },
-     { MP_ROM_QSTR(MP_QSTR_addCharacteristic),  MP_ROM_PTR(&ubluepy_service_add_char_obj) },
-     { MP_ROM_QSTR(MP_QSTR_getCharacteristics), MP_ROM_PTR(&ubluepy_service_get_chars_obj) },
-@@ -159,7 +166,8 @@
- static const mp_rom_map_elem_t ubluepy_service_locals_dict_table[] = {
-     { MP_ROM_QSTR(MP_QSTR_getCharacteristic),  MP_ROM_PTR(&ubluepy_service_get_char_obj) },
-     { MP_ROM_QSTR(MP_QSTR_addCharacteristic),  MP_ROM_PTR(&ubluepy_service_add_char_obj) },
--    { MP_ROM_QSTR(MP_QSTR_getCharacteristics), MP_ROM_PTR(&ubluepy_service_get_chars_obj) },
++    { MP_ROM_QSTR(MP_QSTR_getCharacteristic),  MP_ROM_PTR(&ubluepy_service_get_char_obj) },
++    { MP_ROM_QSTR(MP_QSTR_addCharacteristic),  MP_ROM_PTR(&ubluepy_service_add_char_obj) },
 +    { MP_ROM_QSTR(MP_QSTR_getCharacteristics), MP_ROM_PTR(&ubluepy_service_get_chars_obj) },
 +    { MP_ROM_QSTR(MP_QSTR_getStartHandle),       MP_ROM_PTR(&ubluepy_service_start_handle_obj) },
- #if 0
-     // Properties
-     { MP_ROM_QSTR(MP_QSTR_peripheral), MP_ROM_PTR(&ubluepy_service_get_peripheral_obj) },
++#if 0
++    // Properties
++    { MP_ROM_QSTR(MP_QSTR_peripheral), MP_ROM_PTR(&ubluepy_service_get_peripheral_obj) },
++#endif
++    { MP_ROM_QSTR(MP_QSTR_uuid),       MP_ROM_PTR(&ubluepy_service_get_uuid_obj) },
++    { MP_ROM_QSTR(MP_QSTR_PRIMARY),    MP_ROM_INT(UBLUEPY_SERVICE_PRIMARY) },
++    { MP_ROM_QSTR(MP_QSTR_SECONDARY),  MP_ROM_INT(UBLUEPY_SERVICE_SECONDARY) },

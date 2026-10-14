@@ -243,5 +243,9 @@ Separate tests are needed for the inverse UART -> BLE Notify direction.
 Avoid writing to the peripheral's UART-configuration UUIDs
 (`0bf10001...` / `0bf10002...`) as settings may persist in flash.
 
-**Hardware status:** awaiting execution of this combined BLE-write and UART
-receive test on the connected boards.
+**Hardware-verified (2026-10-14):** On the ISP1807, the GATT Read of UART
+settings (handle 16) returned `0a 00 00 00 08 07 06 03`; a NUS RX Write
+Request to value handle 25 sent `isp1807-test`. The peer UART TX wired to
+ISP1807 P0.07 returned exactly `isp1807-test` and the test printed
+`RESULT: PASS`. This confirms the Central GATT Read and Write paths and the
+BLE-to-UART bridge. CCCD discovery / Notify remains unverified.

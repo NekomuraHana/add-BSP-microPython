@@ -43,6 +43,8 @@ jobs:
           git apply ../patches/micropython/nrf-uart-pin-selection.patch
           git apply --check ../patches/micropython/nrf-ble-central-gatt.patch
           git apply ../patches/micropython/nrf-ble-central-gatt.patch
+          git apply --check ../patches/micropython/nrf-ble-raw-uuid.patch
+          git apply ../patches/micropython/nrf-ble-raw-uuid.patch
 
       - name: Setup nRF build environment
         working-directory: micropython

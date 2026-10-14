@@ -44,7 +44,7 @@ diff --git a/ports/nrf/modules/ubluepy/ubluepy_peripheral.c b/ports/nrf/modules/
 +    p_uuid->value[0] = p_desc_data->uuid & 0xFF;
      p_uuid->value[1] = p_desc_data->uuid >> 8;
  
-@@ -441,4 +452,22 @@
+@@ -441,4 +450,22 @@
 -}
 -static MP_DEFINE_CONST_FUN_OBJ_KW(ubluepy_peripheral_connect_obj, 2, peripheral_connect);
 -
@@ -71,7 +71,7 @@ diff --git a/ports/nrf/modules/ubluepy/ubluepy_peripheral.c b/ports/nrf/modules/
 +
 +
 +#endif
-@@ -451,4 +480,5 @@
+@@ -451,4 +478,5 @@
 -#if MICROPY_PY_UBLUEPY_CENTRAL
 -    { MP_ROM_QSTR(MP_QSTR_connect),                MP_ROM_PTR(&ubluepy_peripheral_connect_obj) },
 -#if 0

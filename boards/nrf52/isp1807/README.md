@@ -214,44 +214,31 @@ There is currently no automatic full-128-bit UUID reconstruction in
 for generic 128-bit UUID matching.
 
 
-### Central GATT Read / Write / Notify hardware test
+### Central GATT Write -> external UART hardware test
 
 Run [`tests/isp1807_ble_central_gatt_rw.py`](../../../tests/isp1807_ble_central_gatt_rw.py)
-against a controlled test peripheral.
+with a NUS-compatible BLE-to-UART peripheral, such as the Switch Science
+product 7453.
 
-The test discovers value handles by reading and decoding ATT characteristic
-declarations. It creates a UUID-to-(handle, properties) mapping so the
-write destination and notify source are independent.
+Wiring (check compatible 3.3 V logic and connect grounds):
+- Peripheral UART TX -> ISP1807 P0.07 (UART1 RX)
+- Peripheral UART RX <- ISP1807 P0.08 (UART1 TX; unused in this test)
+- GND <-> GND
 
-For the standard Nordic UART Service (NUS), names are from the
-**peripheral's** perspective:
-- NUS RX `6e400002-b5a3-f393-e0a9-e50e24dcca9e`: Central **writes** here
-  (properties `0x0c`: Write and Write Without Response).
-- NUS TX `6e400003-b5a3-f393-e0a9-e50e24dcca9e`: Central **receives
-  notifications** here (properties `0x10`: Notify; GATT Read is not available).
+The test configures UART1 as 115200 8N1 on P0.08/P0.07. It discovers
+the NUS RX characteristic UUID
+`6e400002-b5a3-f393-e0a9-e50e24dcca9e`, writes the
+`WRITE_DATA` payload (20 bytes maximum), and collects bytes from the
+ISP1807 UART RX pin. It reports `RESULT: PASS` only when the complete
+UART receive data equals the transmitted BLE payload; otherwise `FAIL`.
+The peripheral must bridge BLE NUS writes onto its hardware UART TX at
+the matching baud rate.
 
-Set `WRITE_UUID` and `NOTIFY_UUID` to these or to the corresponding UUIDs
-on another test peripheral. Set `TARGET_ADDR` and keep `ENABLE_WRITE=True` for the controlled NUS
-loopback device. Set `CCCD_HANDLE` to the
-**verified descriptor handle** for the Notify characteristic (descriptor
-UUID `0x2902`). Inspect the peripheral's GATT descriptors externally;
-never guess `value_handle + 1`. The CCCD is configured **before** writing.
+This exercises BLE Central Write Request/Command and the external UART
+receive path; it deliberately does **not** use CCCD or GATT Notify.
+Separate tests are needed for the inverse UART -> BLE Notify direction.
+Avoid writing to the peripheral's UART-configuration UUIDs
+(`0bf10001...` / `0bf10002...`) as settings may persist in flash.
 
-With a peripheral that echoes NUS RX data to NUS TX notifications, the test
-compares the received notification payload to `WRITE_DATA` and reports
-`LOOPBACK: PASS` on a match. `NO MATCH` means no matching Notify was
-observed in the test window; it does not necessarily mean the write failed.
-Without a verified CCCD handle, the loopback test refuses to transmit.
-It subscribes before sending and clears the subscription afterward.
-
-`WITH_RESPONSE=True` selects Write Request and `False` selects Write
-Command, where supported. The firmware limits each GATT write to 20 bytes.
-NUS RX has no Read property; the loopback response arrives as an asynchronous
-notification on NUS TX, not as a characteristic Read.
-
-**Hardware status:** scan, connect, discovery and GATT Read verified; an
-unrelated UART configuration characteristic previously accepted a Write
-Request without an exception, but its value did not change. Avoid writes to
-configuration characteristic UUIDs `0bf10001...` / `0bf10002...` because
-settings can be saved to flash. NUS Write-to-Notify loopback still needs
-hardware confirmation.
+**Hardware status:** awaiting execution of this combined BLE-write and UART
+receive test on the connected boards.

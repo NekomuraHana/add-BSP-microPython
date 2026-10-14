@@ -44,7 +44,7 @@ for service in central.getServices():
         value_handle = characteristic.getHandle()
         # ATT characteristic declaration normally immediately precedes the value.
         # We validate the declaration's embedded value handle before trusting it.
-        declaration_handle = value_handle - 1
+        declaration_handle = characteristic.getDeclarationHandle()
         try:
             data = bytes(central.readHandle(declaration_handle))
             if len(data) not in (5, 19):

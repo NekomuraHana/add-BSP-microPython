@@ -221,11 +221,11 @@ with a NUS-compatible BLE-to-UART peripheral, such as the Switch Science
 product 7453.
 
 Wiring (check compatible 3.3 V logic and connect grounds):
-- Peripheral UART TX -> ISP1807 P0.07 (UART1 RX)
-- Peripheral UART RX <- ISP1807 P0.08 (UART1 TX; unused in this test)
+- Peripheral UART TX -> ISP1807 P0.07 (UART0 RX)
+- Peripheral UART RX <- ISP1807 P0.08 (UART0 TX; unused in this test)
 - GND <-> GND
 
-The test configures UART1 as 115200 8N1 on P0.08/P0.07. It uses
+The test configures UART0 as 115200 8N1 on P0.08/P0.07. It uses
 GATT Read on UART-settings UUID `0bf10001-7dfb-4e4a-b734-f40d695f67ab`
 (only reads the settings; never writes or changes persistent configuration).
 It then discovers the NUS RX characteristic UUID

@@ -39,7 +39,8 @@ jobs:
       # Same compiler/toolchain setup used by upstream MicroPython nRF CI.
       - name: Apply MicroPython patches
         working-directory: micropython
-        run: git apply ../patches/micropython/nrf-uart-pin-selection.patch
+        run: |
+          git apply ../patches/micropython/nrf-uart-pin-selection.patch
           git apply --check ../patches/micropython/nrf-ble-central-gatt.patch
           git apply ../patches/micropython/nrf-ble-central-gatt.patch
 

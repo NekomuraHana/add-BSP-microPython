@@ -231,8 +231,8 @@ For the standard Nordic UART Service (NUS), names are from the
   notifications** here (properties `0x10`: Notify; GATT Read is not available).
 
 Set `WRITE_UUID` and `NOTIFY_UUID` to these or to the corresponding UUIDs
-on another test peripheral. Set `TARGET_ADDR`, then opt in with
-`ENABLE_WRITE=True`. Enable Notify by setting `CCCD_HANDLE` to the
+on another test peripheral. Set `TARGET_ADDR` and keep `ENABLE_WRITE=True` for the controlled NUS
+loopback device. Set `CCCD_HANDLE` to the
 **verified descriptor handle** for the Notify characteristic (descriptor
 UUID `0x2902`). Inspect the peripheral's GATT descriptors externally;
 never guess `value_handle + 1`. The CCCD is configured **before** writing.
@@ -241,15 +241,17 @@ With a peripheral that echoes NUS RX data to NUS TX notifications, the test
 compares the received notification payload to `WRITE_DATA` and reports
 `LOOPBACK: PASS` on a match. `NO MATCH` means no matching Notify was
 observed in the test window; it does not necessarily mean the write failed.
-Without a CCCD, the test only exercises the write and cannot validate the
-notification echo.
+Without a verified CCCD handle, the loopback test refuses to transmit.
+It subscribes before sending and clears the subscription afterward.
 
 `WITH_RESPONSE=True` selects Write Request and `False` selects Write
 Command, where supported. The firmware limits each GATT write to 20 bytes.
-Characteristic reads are attempted only when the selected write
-characteristic also advertises Read, and should not be mistaken for a
-loopback receipt on the Notify characteristic.
+NUS RX has no Read property; the loopback response arrives as an asynchronous
+notification on NUS TX, not as a characteristic Read.
 
-**Hardware status:** scan, connect, discovery and GATT Read verified; Write
-Request returned without an exception, but peer-side processing and
-Write-to-Notify loopback still need confirmation.
+**Hardware status:** scan, connect, discovery and GATT Read verified; an
+unrelated UART configuration characteristic previously accepted a Write
+Request without an exception, but its value did not change. Avoid writes to
+configuration characteristic UUIDs `0bf10001...` / `0bf10002...` because
+settings can be saved to flash. NUS Write-to-Notify loopback still needs
+hardware confirmation.

@@ -112,17 +112,17 @@ jobs:
       - name: Build bootloader-free application for SWD
         working-directory: micropython
         run: |
-          make -C ports/nrf BOARD=ISP1807_LR SD=s140 \\
+          make -C ports/nrf BOARD=ISP1807_LR SD=s140 \
             ISP1807_NO_BOOTLOADER=1 BUILD=build-ISP1807_LR-s140-standalone -j$(nproc)
 
       - name: Verify standalone application and create one-shot SWD HEX
         run: |
-          python3 scripts/verify_isp1807_firmware.py --standalone \\
+          python3 scripts/verify_isp1807_firmware.py --standalone \
             micropython/ports/nrf/build-ISP1807_LR-s140-standalone/firmware.bin
           python3 -m pip install --user intelhex
-          python3 scripts/merge_isp1807_swd.py \\
-            micropython/ports/nrf/drivers/bluetooth/s140_nrf52_6.1.1/s140_nrf52_6.1.1_softdevice.hex \\
-            micropython/ports/nrf/build-ISP1807_LR-s140-standalone/firmware.hex \\
+          python3 scripts/merge_isp1807_swd.py \
+            micropython/ports/nrf/drivers/bluetooth/s140_nrf52_6.1.1/s140_nrf52_6.1.1_softdevice.hex \
+            micropython/ports/nrf/build-ISP1807_LR-s140-standalone/firmware.hex \
             micropython/ports/nrf/build-ISP1807_LR-s140-standalone/isp1807-s140-micropython-swd.hex
 
       - name: Show firmware

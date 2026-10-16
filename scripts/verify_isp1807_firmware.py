@@ -7,7 +7,9 @@ import argparse
 from pathlib import Path
 
 APP_START = 0x26000
-APP_END = 0xED000
+BOOTLOADER_APP_END = 0xED000
+STANDALONE_APP_END = 0x100000
+APP_END = BOOTLOADER_APP_END
 RAM_START = 0x20000000
 RAM_END = 0x20040000
 MAX_APP_SIZE = APP_END - APP_START
@@ -21,14 +23,20 @@ USB_INTERFACE = b"MicroPython REPL"
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("firmware_bin", type=Path)
+    parser.add_argument(
+        "--standalone", action="store_true",
+        help="verify S140 firmware built without the upper-flash bootloader reservation",
+    )
     args = parser.parse_args()
+    app_end = STANDALONE_APP_END if args.standalone else APP_END
+    max_app_size = app_end - APP_START
 
     data = args.firmware_bin.read_bytes()
     if len(data) < 8:
         raise SystemExit("firmware.bin is too small to contain a vector table")
-    if len(data) > MAX_APP_SIZE:
+    if len(data) > max_app_size:
         raise SystemExit(
-            f"firmware.bin is too large: {len(data)} > {MAX_APP_SIZE} bytes"
+            f"firmware.bin is too large: {len(data)} > {max_app_size} bytes"
         )
 
     initial_sp = int.from_bytes(data[0:4], "little")
@@ -43,7 +51,7 @@ def main() -> int:
         raise SystemExit(f"reset vector is not Thumb: 0x{reset_vector:08X}")
 
     reset_address = reset_vector & ~1
-    if not (APP_START <= reset_address < APP_END):
+    if not (APP_START <= reset_address < app_end):
         raise SystemExit(
             f"reset vector outside application region: 0x{reset_vector:08X}"
         )
@@ -60,6 +68,7 @@ def main() -> int:
         raise SystemExit("missing firmware markers: " + ", ".join(missing))
 
     print(f"firmware size : {len(data)} bytes")
+    print(f"application range: 0x{APP_START:06X}-0x{app_end:06X}")
     print(f"initial SP    : 0x{initial_sp:08X}")
     print(f"reset vector  : 0x{reset_vector:08X}")
     for name in checks:

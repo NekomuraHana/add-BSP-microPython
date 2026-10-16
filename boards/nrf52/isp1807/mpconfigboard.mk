@@ -9,7 +9,12 @@ LD_FILES += boards/nrf52840_1M_256k.ld
 # The Switch Science board ships with an Adafruit-compatible bootloader whose
 # application area ends at 0xED000. Reserve the tail so MicroPython's ROMFS/LFS
 # regions can never overlap the bootloader/settings area.
+# Keep the existing UF2/DFU layout by default. A standalone SWD image can
+# reclaim the bootloader tail without changing the S140 application offset.
+ISP1807_NO_BOOTLOADER ?= 0
+ifneq ($(ISP1807_NO_BOOTLOADER),1)
 LD_FILES += $(BOARD_DIR)/isp1807_breakout_bootloader.ld
+endif
 
 NRF_DEFINES += -DNRF52840_XXAA
 

@@ -68,7 +68,7 @@ jobs:
 
       - name: Install DFU tooling
         run: |
-          python3 -m pip install --user adafruit-nrfutil
+          python3 -m pip install --user adafruit-nrfutil intelhex
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Verify application flash range

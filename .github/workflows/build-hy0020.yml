@@ -1,0 +1,126 @@
+name: Build HY0020 MicroPython BSP
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    paths:
+      - ".github/workflows/build-hy0020.yml"
+      - "boards/nrf52/hy0020/**"
+      - "patches/micropython/nrf-uart-pin-selection.patch"
+      - "micropython"
+
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-hy0020.yml"
+      - "boards/nrf52/hy0020/**"
+      - "patches/micropython/nrf-uart-pin-selection.patch"
+      - "micropython"
+
+jobs:
+  hy0020:
+    name: HY0020 / AE-HY0020-DIP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Apply UART pin-selection patch
+        working-directory: micropython
+        run: git apply ../patches/micropython/nrf-uart-pin-selection.patch
+
+      - name: Setup nRF build environment
+        working-directory: micropython
+        run: ./tools/ci.sh nrf_setup
+
+      - name: Stage HY0020 BSP
+        run: |
+          rm -rf micropython/ports/nrf/boards/HY0020
+          mkdir -p micropython/ports/nrf/boards/HY0020
+          cp boards/nrf52/hy0020/mpconfigboard.h \
+             boards/nrf52/hy0020/mpconfigboard.mk \
+             boards/nrf52/hy0020/pins.csv \
+             boards/nrf52/hy0020/hy0020_adafruit_bootloader.ld \
+             boards/nrf52/hy0020/manifest.py \
+             boards/nrf52/hy0020/_boot.py \
+             micropython/ports/nrf/boards/HY0020/
+
+      - name: Download S132 SoftDevice
+        working-directory: micropython
+        run: ports/nrf/drivers/bluetooth/download_ble_stack.sh s132_nrf52_6_1_1
+
+      - name: Build mpy-cross
+        working-directory: micropython
+        run: make -C mpy-cross -j$(nproc)
+
+      - name: Fetch nRF submodules
+        working-directory: micropython
+        run: make -C ports/nrf submodules -j$(nproc)
+
+      - name: Build HY0020
+        working-directory: micropython
+        run: make -C ports/nrf BOARD=HY0020 SD=s132 -j$(nproc)
+
+      - name: Install DFU tooling
+        run: |
+          python3 -m pip install --user adafruit-nrfutil intelhex
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify application flash range
+        run: |
+          python3 - <<'PY'
+          from intelhex import IntelHex
+
+          path = "micropython/ports/nrf/build-HY0020-s132/firmware.hex"
+          image = IntelHex(path)
+          addresses = image.addresses()
+          if not addresses:
+              raise SystemExit("firmware.hex contains no data")
+
+          start = min(addresses)
+          end = max(addresses) + 1
+          print(f"Application HEX range: 0x{start:05X}-0x{end - 1:05X}")
+
+          if start < 0x26000:
+              raise SystemExit("application overlaps S132")
+          if end > 0x6D000:
+              raise SystemExit("application exceeds Adafruit nRF52832 application boundary")
+          PY
+
+      - name: Build serial DFU package
+        run: |
+          adafruit-nrfutil dfu genpkg \
+            --dev-type 0x0052 \
+            --sd-req 0x00B7 \
+            --application micropython/ports/nrf/build-HY0020-s132/firmware.hex \
+            micropython/ports/nrf/build-HY0020-s132/firmware-dfu.zip
+
+      - name: Show firmware size
+        run: |
+          arm-none-eabi-size micropython/ports/nrf/build-HY0020-s132/firmware.elf
+          ls -lh micropython/ports/nrf/build-HY0020-s132/
+
+      # A single-file, unarchived artifact avoids nesting the DFU ZIP inside
+      # GitHub's automatically generated artifact ZIP.
+      # With archive: false, the artifact is named after its source filename.
+      - name: Upload serial DFU ZIP (direct download)
+        uses: actions/upload-artifact@v7
+        with:
+          path: micropython/ports/nrf/build-HY0020-s132/firmware-dfu.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload development firmware
+        uses: actions/upload-artifact@v7
+        with:
+          name: fdk-hy0020-micropython-debug
+          path: |
+            micropython/ports/nrf/build-HY0020-s132/firmware.hex
+            micropython/ports/nrf/build-HY0020-s132/firmware.bin
+            micropython/ports/nrf/build-HY0020-s132/firmware.elf
+          if-no-files-found: error

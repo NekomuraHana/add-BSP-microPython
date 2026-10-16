@@ -39,8 +39,25 @@ attached to the REPL.
 - SPI0 MISO: P0.12
 - NFC: P0.09 / P0.10
 
-The pin names follow the nRF port convention: P0-P31 map to nRF P0.00-P0.31
-and P32-P47 map to nRF P1.00-P1.15.
+The legacy pin names follow the nRF port convention: P2-P31 map to nRF
+P0.02-P0.31 and P32-P47 map to nRF P1.00-P1.15. The same pins are also
+available through nRF GPIO-style names, from `P0_02` to `P0_31` and
+`P1_00` to `P1_15`. Existing numeric `Pin(6)` and string `Pin("P6")`
+usage remains supported. Names are aliases of the same hardware GPIO,
+not additional pins.
+
+```python
+from machine import Pin
+
+led_gpio = Pin("P0_06", Pin.OUT)  # same physical GPIO as Pin("LED")
+button = Pin("P1_06", Pin.IN)
+# Pin.cpu uses legacy nRF core pin names; the new P0_xx/P1_xx aliases
+# are exposed as board names.
+assert Pin.board.P0_06 is Pin.board.P6
+```
+
+Only GPIOs already listed for this board are aliased; P0.00 and P0.01
+are not added by this change.
 
 Board aliases are also provided:
 

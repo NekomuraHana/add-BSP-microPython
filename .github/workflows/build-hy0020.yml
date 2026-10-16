@@ -105,13 +105,22 @@ jobs:
           arm-none-eabi-size micropython/ports/nrf/build-HY0020-s132/firmware.elf
           ls -lh micropython/ports/nrf/build-HY0020-s132/
 
-      - name: Upload firmware
-        uses: actions/upload-artifact@v4
+      # A single-file, unarchived artifact avoids nesting the DFU ZIP inside
+      # GitHub's automatically generated artifact ZIP.
+      # With archive: false, the artifact is named after its source filename.
+      - name: Upload serial DFU ZIP (direct download)
+        uses: actions/upload-artifact@v7
         with:
-          name: fdk-hy0020-micropython
+          path: micropython/ports/nrf/build-HY0020-s132/firmware-dfu.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload development firmware
+        uses: actions/upload-artifact@v7
+        with:
+          name: fdk-hy0020-micropython-debug
           path: |
             micropython/ports/nrf/build-HY0020-s132/firmware.hex
             micropython/ports/nrf/build-HY0020-s132/firmware.bin
             micropython/ports/nrf/build-HY0020-s132/firmware.elf
-            micropython/ports/nrf/build-HY0020-s132/firmware-dfu.zip
           if-no-files-found: error

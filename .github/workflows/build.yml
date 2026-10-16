@@ -18,7 +18,7 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
+      - 'ISP1807-V*'
     paths:
       - ".github/workflows/build.yml"
       - "boards/nrf52/isp1807/**"
@@ -32,6 +32,7 @@ permissions:
 
 jobs:
   isp1807:
+    if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/') || startsWith(github.ref, 'refs/tags/ISP1807-V')
     name: ISP1807-LR
     runs-on: ubuntu-latest
 
@@ -128,7 +129,7 @@ jobs:
 
   release:
     name: Publish ISP1807 firmware
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/ISP1807-V')
     needs: isp1807
     runs-on: ubuntu-latest
     permissions:

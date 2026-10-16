@@ -108,7 +108,7 @@ jobs:
       - name: Upload firmware
         uses: actions/upload-artifact@v4
         with:
-          name: hy0020-micropython
+          name: fdk-hy0020-micropython
           path: |
             micropython/ports/nrf/build-HY0020-s132/firmware.hex
             micropython/ports/nrf/build-HY0020-s132/firmware.bin

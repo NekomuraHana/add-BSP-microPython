@@ -35,6 +35,13 @@
 #define MICROPY_HW_UART1_RX          (8)
 #define MICROPY_HW_UART1_HWFC        (0)
 
+// Build-time SPI defaults (all brought out on the Akizuki carrier).
+// Applications can select another supported pin mapping explicitly.
+#define MICROPY_HW_SPI0_NAME         "SPI0"
+#define MICROPY_HW_SPI0_SCK          (2)
+#define MICROPY_HW_SPI0_MOSI         (3)
+#define MICROPY_HW_SPI0_MISO         (4)
+
 // There is no on-board user LED on the AE-HY0020-DIP carrier.
 #define MICROPY_HW_LED_COUNT         (0)
 

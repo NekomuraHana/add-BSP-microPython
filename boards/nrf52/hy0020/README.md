@@ -19,8 +19,9 @@ MicroPython applications.
 
 ## REPL mode selection
 
-The UART is attached to the MicroPython REPL at 115200 bps during early startup.
-The frozen `_boot.py` then samples P0.12 once:
+Immediately after reset, the native nRF startup code enables the P0.12
+pull-up and **latches the pin level once**, before initializing the Python VM.
+It only initializes UART0 as a 115200-bps REPL if the latched level is LOW:
 
 - **P0.12 LOW**: keep UART0 attached to the REPL.
 - **P0.12 HIGH** (internal pull-up/default): detach and deinitialize the REPL
@@ -28,6 +29,9 @@ The frozen `_boot.py` then samples P0.12 once:
 
 For maintenance/debugging, hold the P0.12 switch LOW, assert reset, release
 reset, then release the P0.12 switch.  The REPL remains active for that boot.
+
+Changing P0.12 after reset no longer changes the selected mode; another hardware
+reset is required. This avoids a race against MicroPython's Python-level startup.
 
 In normal mode, `machine.UART(0)` is free for application use.  The repository's
 existing nRF UART pin-selection patch allows alternate pins, for example:

@@ -110,7 +110,25 @@ def main():
     central.writeHandle(value_handle, WRITE_DATA, WITH_RESPONSE)
     actual = read_uart_bytes(uart, len(WRITE_DATA))
     print("UART RX:", actual)
-    print("RESULT:", "PASS" if actual == WRITE_DATA else "FAIL")
+    return settings, actual
 
 
-main()
+# UART0 may also carry the REPL on some boards. Persist results instead of
+# depending on console output (read after rebooting into REPL mode).
+LOG_FILE = "/ble_central_gatt_test.txt"
+try:
+    settings, actual = main()
+    verdict = "PASS" if actual == WRITE_DATA else "FAIL"
+    error = None
+except Exception as exc:
+    settings, actual = None, None
+    verdict = "ERROR"
+    error = repr(exc)
+with open(LOG_FILE, "w") as log:
+    log.write("BLE Central GATT + UART test\\n")
+    log.write("settings: %r\\n" % settings)
+    log.write("expected UART: %r\\n" % WRITE_DATA)
+    log.write("actual UART: %r\\n" % actual)
+    if error:
+        log.write("error: %s\\n" % error)
+    log.write("RESULT: %s\\n" % verdict)

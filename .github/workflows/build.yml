@@ -10,7 +10,9 @@ on:
       - "scripts/verify_isp1807_firmware.py"
       - "scripts/verify_isp1807_uf2.py"
       - "scripts/merge_isp1807_swd.py"
-      - "patches/micropython/**"
+      - "patches/micropython/nrf-uart-pin-selection.patch"
+      - "patches/micropython/nrf-ble-central-gatt.patch"
+      - "patches/micropython/nrf-ble-raw-uuid.patch"
       - "micropython"
 
   # PR branches are built by pull_request above. Build pushes only after they
@@ -23,7 +25,9 @@ on:
       - "boards/nrf52/isp1807/**"
       - "scripts/verify_isp1807_firmware.py"
       - "scripts/verify_isp1807_uf2.py"
-      - "patches/micropython/**"
+      - "patches/micropython/nrf-uart-pin-selection.patch"
+      - "patches/micropython/nrf-ble-central-gatt.patch"
+      - "patches/micropython/nrf-ble-raw-uuid.patch"
       - "micropython"
 
 jobs:

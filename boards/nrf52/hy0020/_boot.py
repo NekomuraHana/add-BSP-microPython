@@ -29,7 +29,5 @@ def setup_fs():
     gc.collect()
 
 
-setup_console()
 setup_fs()
-del setup_console
 del setup_fs

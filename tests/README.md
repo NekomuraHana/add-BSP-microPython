@@ -8,21 +8,21 @@ a flashed firmware, and a `test_config.py` adjusted to its pin map.
 1. Copy `tests/common/test_config.py` and edit it for your target board.
 2. Copy that configuration file alongside the specific common test to the board
    (or ensure the same directory is on `sys.path`).
-3. Run a test through the device's REPL with `exec(open("name.py").read())`
-   or an equivalent `mpremote run` command.
-4. Treat `RESULT: PASS` as hardware evidence only for the run performed.
+3. For a board sharing REPL and UART0, place the test on the filesystem as `main.py` or launch it in the **normal UART mode** after reset. Do not run UART0 tests in UART-REPL mode.
+4. Switch back to REPL mode and **reset the device** before reading the persisted log files. For boards with a separate USB REPL, tests may also be launched from that REPL.
+5. Each test run overwrites its own log. `RESULT: PASS` is evidence only for that physical run.
 
 ## What each test needs
 
 | Test | Connections / requirements |
 | --- | --- |
 | `gpio.py` | LED or monitored output and a separately driven input |
-| `uart_loopback.py` | TX wired to RX; UART not in use for console |
+| `uart_loopback.py` | TX wired to RX; UART not in use for console; writes `/uart_test.txt` |
 | `i2c_sht3x.py` | Sensirion SHT30/SHT31/SHT35 on 0x44 or 0x45, SDA/SCL pull-ups |
 | `spi_loopback.py` | MOSI wired to MISO (hardware SPI) |
-| `ble_peripheral_write.py` | BLE Peripheral advertising; print connect/disconnect and GATT Write payloads on REPL; requires a BLE Central to write |
+| `ble_peripheral_write.py` | BLE Peripheral advertising; save connect/disconnect and GATT Write payloads to `/ble_peripheral_test.txt`; requires a BLE Central to write |
 | `ble_raw_uuid.py` | Legacy `ubluepy` Central firmware and a BLE peer address |
-| `ble_central_gatt_rw.py` | Specific NUS-to-UART bridge peripheral, matching UART wiring |
+| `ble_central_gatt_rw.py` | Specific NUS-to-UART bridge peripheral, matching UART wiring; writes `/ble_central_gatt_test.txt` |
 
 BLE Peripheral write test uses service UUID `12345678-1234-5678-1234-56789abcdef0` and write characteristic UUID `12345678-1234-5678-1234-56789abcdef1`. Write data is displayed in full as bytes; there is no LED control. Ensure the REPL remains available during BLE events.\n\nBLE GATT test requires a peer exposing `0bf10001-7dfb-4e4a-b734-f40d695f67ab`
 (readable settings) and NUS RX characteristic `6e400002-b5a3-f393-e0a9-e50e24dcca9e`;
@@ -39,3 +39,24 @@ historical/known-wiring regression examples. Generalized scripts use
   requiring UART0 must run in the normal (non-UART-REPL) boot mode.
 - SPI loopback verifies the physical port and wiring, **not** an SPI sensor.
 - The test suite does not yet automate physical-device testing in CI.
+
+## Reading test logs from REPL
+
+With the UART released from the test and REPL enabled **after reboot**, run:
+
+```python
+with open("/uart_test.txt") as f:
+    print(f.read())
+
+with open("/ble_peripheral_test.txt") as f:
+    print(f.read())
+
+with open("/ble_central_gatt_test.txt") as f:
+    print(f.read())
+```
+
+Read only the files from tests that were executed. The flash filesystem must be
+mounted read/write in the test mode and remain persistent across software/hard
+resets. These are filesystem writes, so do not cut power before log writes
+complete. BLE callback events are queued (16-event limit); overflow is logged
+as a warning. For reliable measurements, avoid high-frequency event bursts.

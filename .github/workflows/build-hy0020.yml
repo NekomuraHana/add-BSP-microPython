@@ -8,6 +8,7 @@ on:
       - ".github/workflows/build-hy0020.yml"
       - "boards/nrf52/hy0020/**"
       - "patches/micropython/nrf-uart-pin-selection.patch"
+      - "patches/micropython/nrf-early-uart-repl-select.patch"
       - "micropython"
 
   push:
@@ -32,7 +33,9 @@ jobs:
 
       - name: Apply UART pin-selection patch
         working-directory: micropython
-        run: git apply ../patches/micropython/nrf-uart-pin-selection.patch
+        run: |
+          git apply ../patches/micropython/nrf-uart-pin-selection.patch
+          git apply ../patches/micropython/nrf-early-uart-repl-select.patch
 
       - name: Setup nRF build environment
         working-directory: micropython

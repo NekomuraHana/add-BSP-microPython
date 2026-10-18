@@ -13,6 +13,7 @@ on:
       - "patches/micropython/nrf-uart-pin-selection.patch"
       - "patches/micropython/nrf-ble-central-gatt.patch"
       - "patches/micropython/nrf-ble-raw-uuid.patch"
+      - "patches/micropython/nrf-ble-declaration-handle.patch"
       - "micropython"
 
   # PR branches are built by pull_request above. Build pushes only after they
@@ -28,6 +29,7 @@ on:
       - "patches/micropython/nrf-uart-pin-selection.patch"
       - "patches/micropython/nrf-ble-central-gatt.patch"
       - "patches/micropython/nrf-ble-raw-uuid.patch"
+      - "patches/micropython/nrf-ble-declaration-handle.patch"
       - "micropython"
 
 jobs:

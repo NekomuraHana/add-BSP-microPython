@@ -21,6 +21,7 @@
 
 // nRF52832 has no native USB peripheral.  The console uses UART0.
 #define MICROPY_HW_ENABLE_USBDEV     (0)
+#define MICROPY_HW_UART_REPL_SELECT_PIN (12)
 #define MICROPY_HW_ENABLE_UART_REPL  (1)
 #define MICROPY_HW_UART_REPL         (0)
 #define MICROPY_HW_UART_REPL_BAUD    (115200)

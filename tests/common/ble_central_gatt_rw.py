@@ -120,10 +120,10 @@ except Exception as exc:
     verdict = "ERROR"
     error = repr(exc)
 with open(LOG_FILE, "w") as log:
-    log.write("BLE Central GATT + UART test\\n")
-    log.write("settings: %r\\n" % settings)
-    log.write("expected UART: %r\\n" % WRITE_DATA)
-    log.write("actual UART: %r\\n" % actual)
+    log.write("BLE Central GATT + UART test\n")
+    log.write("settings: %r\n" % settings)
+    log.write("expected UART: %r\n" % WRITE_DATA)
+    log.write("actual UART: %r\n" % actual)
     if error:
-        log.write("error: %s\\n" % error)
-    log.write("RESULT: %s\\n" % verdict)
+        log.write("error: %s\n" % error)
+    log.write("RESULT: %s\n" % verdict)

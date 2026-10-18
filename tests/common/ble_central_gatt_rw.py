@@ -47,7 +47,6 @@ def discover_characteristics(central):
                 raise ValueError("Characteristic declaration handle mismatch")
             props = declaration[0]
             uuid = uuid_text(declaration[3:]).lower()
-            print("CHAR", value_handle, uuid, "props=0x%02x" % props)
             if uuid in database:
                 raise ValueError("Duplicate characteristic UUID: " + uuid)
             database[uuid] = (value_handle, props)
@@ -88,13 +87,11 @@ def main():
         raise RuntimeError("Target not found")
     central = Peripheral()
     central.connect(found.addr(), addr_type=found.addr_type())
-    print("CONNECTED")
     database = discover_characteristics(central)
     read_target = database.get(READ_UUID.lower())
     if read_target is None or not (read_target[1] & PROP_READ):
         raise ValueError("UART settings characteristic missing or not readable")
     settings = bytes(central.readHandle(read_target[0]))
-    print("GATT READ UART settings:", settings, "handle", read_target[0])
     target = database.get(WRITE_UUID.lower())
     if target is None:
         raise ValueError("NUS RX UUID not found")
@@ -106,10 +103,8 @@ def main():
     # Remove previous UART data so only this test message is compared.
     while uart.any():
         uart.read()
-    print("BLE WRITE handle", value_handle, WRITE_DATA)
     central.writeHandle(value_handle, WRITE_DATA, WITH_RESPONSE)
     actual = read_uart_bytes(uart, len(WRITE_DATA))
-    print("UART RX:", actual)
     return settings, actual
 
 

@@ -1,21 +1,3 @@
-def setup_console():
-    import os
-    from machine import Pin
-
-    # P0.12 is the initial development-mode selector:
-    #   LOW  -> keep UART0 attached to the REPL at 115200 bps
-    #   HIGH -> detach/deinit the REPL UART so machine.UART(0) is available
-    #           to boot.py/main.py with user-selected TX/RX pins.
-    mode = Pin(12, Pin.IN, Pin.PULL_UP)
-    if mode.value():
-        uart = os.dupterm(None)
-        if uart is not None:
-            try:
-                uart.deinit()
-            except:
-                pass
-
-
 def setup_fs():
     import gc
     import vfs

@@ -8,6 +8,9 @@ on:
       - ".github/workflows/build-hy0020.yml"
       - "boards/nrf52/hy0020/**"
       - "patches/micropython/nrf-uart-pin-selection.patch"
+      - "patches/micropython/nrf-ble-central-gatt.patch"
+      - "patches/micropython/nrf-ble-raw-uuid.patch"
+      - "patches/micropython/nrf-ble-declaration-handle.patch"
       - "patches/micropython/nrf-early-uart-repl-select.patch"
       - "micropython"
 
@@ -18,6 +21,10 @@ on:
       - ".github/workflows/build-hy0020.yml"
       - "boards/nrf52/hy0020/**"
       - "patches/micropython/nrf-uart-pin-selection.patch"
+      - "patches/micropython/nrf-ble-central-gatt.patch"
+      - "patches/micropython/nrf-ble-raw-uuid.patch"
+      - "patches/micropython/nrf-ble-declaration-handle.patch"
+      - "patches/micropython/nrf-early-uart-repl-select.patch"
       - "micropython"
 
 jobs:
@@ -31,10 +38,13 @@ jobs:
         with:
           submodules: true
 
-      - name: Apply UART pin-selection patch
+      - name: Apply shared nRF UART/BLE patches and HY0020 startup patch
         working-directory: micropython
         run: |
           git apply ../patches/micropython/nrf-uart-pin-selection.patch
+          git apply ../patches/micropython/nrf-ble-central-gatt.patch
+          git apply ../patches/micropython/nrf-ble-raw-uuid.patch
+          git apply ../patches/micropython/nrf-ble-declaration-handle.patch
           git apply ../patches/micropython/nrf-early-uart-repl-select.patch
 
       - name: Setup nRF build environment

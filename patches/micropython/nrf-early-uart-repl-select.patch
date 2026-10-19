@@ -42,7 +42,7 @@ diff --git a/ports/nrf/main.c b/ports/nrf/main.c
          mp_obj_t args[2] = {
              MP_OBJ_NEW_SMALL_INT(MICROPY_HW_UART_REPL),
              MP_OBJ_NEW_SMALL_INT(MICROPY_HW_UART_REPL_BAUD),
-@@ -254,7 +271,13 @@
+@@ -254,7 +271,12 @@
      #endif
  
      #if MICROPY_VFS || MICROPY_MBFS || MICROPY_MODULE_FROZEN

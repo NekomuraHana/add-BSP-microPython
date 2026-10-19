@@ -12,7 +12,8 @@ import time
 from machine import Pin, UART
 from ubluepy import Peripheral, Scanner
 
-from test_config import BLE_TARGET_ADDR as TARGET_ADDR
+from test_config import BLE_TARGET_SERVICE_UUID
+from ble_advertising import advertising_info
 READ_UUID = "0bf10001-7dfb-4e4a-b734-f40d695f67ab"  # Peripheral UART settings (read-only test)
 WRITE_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"  # Peripheral NUS RX
 WRITE_DATA = b"bsp-test"
@@ -79,12 +80,15 @@ def main():
         raise ValueError("WRITE_DATA must contain 1..20 bytes")
     uart = UART(UART_ID, UART_BAUD, tx=Pin(UART_TX_PIN), rx=Pin(UART_RX_PIN))
     found = None
-    for entry in Scanner().scan(5000):
-        if entry.addr().lower() == TARGET_ADDR.lower():
+    # Target by advertised Primary Service UUID, not a pre-known MAC address.
+    # A device that omits its service UUID from advertising cannot be matched.
+    for entry in Scanner().scan(1000):
+        name, services = advertising_info(entry)
+        if BLE_TARGET_SERVICE_UUID.lower() in (uuid.lower() for uuid in services):
             found = entry
             break
     if found is None:
-        raise RuntimeError("Target not found")
+        raise RuntimeError("Target service UUID not found in advertisements: " + BLE_TARGET_SERVICE_UUID)
     central = Peripheral()
     central.connect(found.addr(), addr_type=found.addr_type())
     database = discover_characteristics(central)

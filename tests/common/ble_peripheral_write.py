@@ -12,7 +12,7 @@ from ubluepy import Service, Characteristic, UUID, Peripheral, constants
 
 SERVICE_UUID = UUID("12345678-1234-5678-1234-56789abcdef0")
 WRITE_CHAR_UUID = UUID("12345678-1234-5678-1234-56789abcdef1")
-DEVICE_NAME = "MicroPython-BSP"
+DEVICE_NAME = "MPBSP"
 
 service = Service(SERVICE_UUID)
 write_char = Characteristic(

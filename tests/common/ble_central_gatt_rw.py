@@ -13,7 +13,7 @@ from machine import Pin, UART
 from ubluepy import Peripheral, Scanner
 
 from test_config import BLE_TARGET_SERVICE_UUID
-from ble_advertising import advertising_info
+from ble_parse_adv import advertising_info
 READ_UUID = "0bf10001-7dfb-4e4a-b734-f40d695f67ab"  # Peripheral UART settings (read-only test)
 WRITE_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"  # Peripheral NUS RX
 WRITE_DATA = b"bsp-test"

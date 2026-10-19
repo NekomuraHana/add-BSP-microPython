@@ -9,5 +9,5 @@ from ble_parse_adv import advertising_info
 while True:
     for entry in Scanner().scan(1000):
         name, services = advertising_info(entry)
-        print("name:", name if name is not None else "(none)",
+        print("addr:", entry.addr(), "name:", name if name is not None else "(none)",
               "primary services:", services if services else "(not advertised)")

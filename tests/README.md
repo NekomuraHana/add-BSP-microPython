@@ -21,8 +21,8 @@ a flashed firmware, and a `test_config.py` adjusted to its pin map.
 | `i2c_sht3x.py` | Sensirion SHT30/SHT31/SHT35 on 0x44 or 0x45, SDA/SCL pull-ups |
 | `spi_loopback.py` | MOSI wired to MISO (hardware SPI) |
 | `ble_peripheral_write.py` | BLE Peripheral advertising; show connect/disconnect and GATT Write payloads on REPL; requires a BLE Central to write |
-| `ble_raw_uuid.py` | Legacy `ubluepy` Central firmware and a BLE peer address |
-| `ble_central_gatt_rw.py` | Specific NUS-to-UART bridge peripheral, matching UART wiring; writes `/ble_central_gatt_test.txt` |
+| `ble_raw_uuid.py` | Repeating 1-second BLE advertisements scan: device name + advertised Primary Service UUID list; stop with Ctrl-C |
+| `ble_central_gatt_rw.py` | Match NUS-to-UART peer by advertised Primary Service UUID, perform GATT Read/Write and UART check, write `/ble_central_gatt_test.txt` |
 
 BLE Peripheral write test outputs events to REPL (no file logging) and uses service UUID `12345678-1234-5678-1234-56789abcdef0` and write characteristic UUID `12345678-1234-5678-1234-56789abcdef1`. Write data is displayed in full as bytes; there is no LED control. Ensure the REPL remains available during BLE events.
 
@@ -31,8 +31,7 @@ BLE GATT test requires a peer exposing `0bf10001-7dfb-4e4a-b734-f40d695f67ab`
 **it does not test Notify**. It must not alter peer persistent UART configuration.
 
 The original `tests/isp1807_ble_*.py` are retained unchanged as ISP1807
-historical/known-wiring regression examples. Generalized scripts use
-`test_config.py` rather than hardcoded peer MACs and GPIOs.
+historical/known-wiring regression examples. Generalized scripts use `test_config.py` for wiring and the Central peer's Primary Service UUID rather than a fixed MAC. `ble_raw_uuid.py` uses `ble_advertising.py` to decode AD types 0x08/0x09 (names) and 0x02/0x03/0x06/0x07 (advertised service UUIDs). It does not connect to devices or enumerate their full GATT database. The Central peer must actually advertise the configured UUID; if the UUID is omitted due to the 31-byte legacy advertising limit, automatic matching is not possible with this test.
 
 ## Board notes
 - ISP1807: REPL uses native USB CDC, so hardware UART0 is available for tests.

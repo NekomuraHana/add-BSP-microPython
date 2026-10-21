@@ -48,6 +48,30 @@ uart = UART(
 )
 ```
 
+## VS Code / MicroPico
+
+When using the **MicroPico** VS Code extension with HY0020's UART REPL,
+`Run Current File on Board` may fail when MicroPico performs a soft reset
+before execution. The extension may log
+`[RunCommand] Failed to execute script on Pico.` and reconnect the serial
+port. This was reproduced even with an empty `boot.py`.
+
+As a workaround, set the following in VS Code **settings.json** (workspace or user settings):
+
+```json
+{
+    "micropico.noSoftResetOnRun": true
+}
+```
+
+With this setting, the repeated run failures stopped in the HY0020 hardware
+test. This is a **workaround**, not a confirmed MicroPico root-cause fix.
+Manual UART terminal tests successfully reached friendly REPL after soft
+reset and executed code using raw REPL, so the observed failure is not
+evidence of a general MicroPython REPL failure. Note that disabling the
+automatic reset means Python state may persist between runs; use a deliberate
+reset when a clean VM is required.
+
 ## Flash layout
 
 The initial layout intentionally follows the Adafruit nRF52832 application

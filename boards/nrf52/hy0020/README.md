@@ -21,11 +21,12 @@ MicroPython applications.
 
 Immediately after reset, the native nRF startup code enables the P0.12
 pull-up and **latches the pin level once**, before initializing the Python VM.
-It only initializes UART0 as a 115200-bps REPL if the latched level is LOW:
+Both modes execute frozen `_boot.py` and filesystem `boot.py` **before** the mode-specific UART handoff. `boot.py` can configure and use UART0 with any supported pins and baud rate. After `boot.py` returns, the firmware waits up to **50 ms** for any UART0 TX in progress to complete, then uninitializes UART0 regardless of how `boot.py` configured it. If TX is still active at the deadline, the UART is nevertheless uninitialized (the remaining bytes may be lost).
 
-- **P0.12 LOW**: keep UART0 attached to the REPL.
-- **P0.12 HIGH** (internal pull-up/default): detach and deinitialize the REPL
-  UART before `boot.py` / `main.py` run.
+- **P0.12 LOW**: after that handoff, initialize UART0 as the 115200-bps REPL on TX=P0.06 / RX=P0.08 and **skip `main.py`**.
+- **P0.12 HIGH** (internal pull-up/default): leave UART0 uninitialized for the application, execute `main.py`, and **do not connect the user's UART to REPL**.
+
+If `boot.py` hangs or never returns, the UART handoff and REPL cannot occur; this mode is not a guaranteed recovery path for a broken `boot.py`.
 
 For maintenance/debugging, hold the P0.12 switch LOW, assert reset, release
 reset, then release the P0.12 switch.  The REPL remains active for that boot.
@@ -33,7 +34,7 @@ reset, then release the P0.12 switch.  The REPL remains active for that boot.
 Changing P0.12 after reset no longer changes the selected mode; another hardware
 reset is required. This avoids a race against MicroPython's Python-level startup.
 
-In normal mode, `machine.UART(0)` is free for application use.  The repository's
+In normal mode, `machine.UART(0)` is free for application use after the boot-script handoff, even when `boot.py` previously used a different UART0 pin/baud mapping.  The repository's
 existing nRF UART pin-selection patch allows alternate pins, for example:
 
 ```python

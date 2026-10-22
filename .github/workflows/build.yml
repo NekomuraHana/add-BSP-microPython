@@ -18,6 +18,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'ISP1807-V*'
     paths:
       - ".github/workflows/build.yml"
       - "boards/nrf52/isp1807/**"
@@ -26,8 +28,12 @@ on:
       - "patches/micropython/**"
       - "micropython"
 
+permissions:
+  contents: read
+
 jobs:
   isp1807:
+    if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/') || startsWith(github.ref, 'refs/tags/ISP1807-V')
     name: ISP1807-LR
     runs-on: ubuntu-latest
 
@@ -150,3 +156,49 @@ jobs:
             micropython/ports/nrf/build-ISP1807_LR-s140-standalone/firmware.elf
             micropython/ports/nrf/build-ISP1807_LR-s140-standalone/isp1807-s140-micropython-swd.hex
           if-no-files-found: error
+
+  release:
+    name: Publish ISP1807 firmware
+    if: startsWith(github.ref, 'refs/tags/ISP1807-V')
+    needs: isp1807
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download firmware artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: isp1807-lr-micropython
+          path: artifacts/uf2
+
+      - name: Download SWD firmware artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: isp1807-lr-micropython-swd
+          path: artifacts/swd
+
+      - name: Prepare release binaries
+        run: |
+          mkdir -p release
+          cp artifacts/uf2/firmware.uf2 release/isp1807-lr-micropython-uf2.uf2
+          cp artifacts/uf2/firmware-dfu.zip release/isp1807-lr-micropython-dfu.zip
+          cp artifacts/swd/isp1807-s140-micropython-swd.hex release/isp1807-lr-micropython-swd.hex
+          sha256sum release/* > release/SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cat > release-notes.md <<'EOF'
+          ## ISP1807-LR MicroPython firmware
+
+          - `isp1807-lr-micropython-uf2.uf2` — UF2 bootloaderが入ったボード用
+          - `isp1807-lr-micropython-dfu.zip` — シリアルDFU更新用
+          - `isp1807-lr-micropython-swd.hex` — bootloader不要、S140とMicroPythonを含むSWD/J-Link一括書き込み用
+          - `SHA256SUMS.txt` — ダウンロードファイルの検証用
+
+          **注意:** SWD版は全領域を書き込むため、既存の書き込み内容が消える場合があります。書き込み方法に合ったファイルを選んでください。
+          EOF
+          gh release create "$TAG" release/* --verify-tag --title "ISP1807-LR MicroPython $TAG" --notes-file release-notes.md

@@ -148,6 +148,61 @@ adafruit-nrfutil dfu serial \
   -b 115200
 ```
 
+## Bootloader-free SWD/J-Link build (with BLE)
+
+CI also builds a **second** ISP1807 image for targets with no UF2/serial
+bootloader. This is **not** a BLE-free build: both firmware variants continue
+using S140 v6.1.1, with the MicroPython application's vector table at
+`0x26000`. The standalone variant only removes the bootloader tail
+reservation (`0xED000..0x100000`), allowing the MicroPython filesystem and
+code regions to use the available upper flash.
+
+The original `isp1807-lr-micropython` artifact is unchanged: it still
+contains `firmware.uf2`, `firmware-dfu.zip` and application-only HEX/BIN/ELF.
+
+A separate `isp1807-lr-micropython-swd` artifact contains:
+
+- `isp1807-s140-micropython-swd.hex` — **one-shot SWD programming image**
+  (MBR/S140 6.1.1 + bootloader-free MicroPython application).
+- `firmware.hex`, `firmware.bin` and `firmware.elf` — standalone
+  **application-only** debugging images; do not use these alone on an erased
+  target because they do not include S140.
+
+For a completely erased target, use a J-Link or equivalent SWD programmer
+to perform a full chip erase and then program/verify
+`isp1807-s140-micropython-swd.hex`, followed by reset. For example, on a
+machine with Nordic's `nrfjprog`:
+
+```sh
+nrfjprog --eraseall -f NRF52
+nrfjprog --program isp1807-s140-micropython-swd.hex --verify -f NRF52
+nrfjprog --reset -f NRF52
+```
+
+**Warning:** `--eraseall` destroys all existing firmware, UICR
+configuration and on-device Python files. Back up anything important first.
+The combined HEX does **not** include UICR programming, a bootloader, or
+bootloader settings. A new standalone target may require a first-boot
+filesystem format. UF2 drag-and-drop and serial DFU are *not* supported after
+removing the bootloader; subsequent updates require SWD.
+
+To reproduce the standalone application build locally after setting up the
+nRF toolchain, stage the board as described above and run:
+
+```sh
+make -C micropython/ports/nrf BOARD=ISP1807_LR SD=s140 \
+    ISP1807_NO_BOOTLOADER=1 BUILD=build-ISP1807_LR-s140-standalone
+python3 -m pip install intelhex
+python3 scripts/merge_isp1807_swd.py \
+    micropython/ports/nrf/drivers/bluetooth/s140_nrf52_6.1.1/s140_nrf52_6.1.1_softdevice.hex \
+    micropython/ports/nrf/build-ISP1807_LR-s140-standalone/firmware.hex \
+    micropython/ports/nrf/build-ISP1807_LR-s140-standalone/isp1807-s140-micropython-swd.hex
+```
+
+**Validation status:** CI verifies the two build variants and combined HEX
+content; physical SWD boot, USB CDC/REPL, BLE, GPIO and file-system operation
+on bootloader-free hardware still require hardware verification.
+
 ## Local build
 
 The local helper mirrors the nRF build sequence used by CI, but does not install

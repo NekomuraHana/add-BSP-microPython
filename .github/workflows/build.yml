@@ -14,6 +14,7 @@ on:
       - "patches/micropython/nrf-ble-central-gatt.patch"
       - "patches/micropython/nrf-ble-raw-uuid.patch"
       - "patches/micropython/nrf-ble-declaration-handle.patch"
+      - "patches/micropython/nrf-spi-i2c-resource-management.patch"
       - "micropython"
 
   # PR branches are built by pull_request above. Build pushes only after they
@@ -32,6 +33,7 @@ on:
       - "patches/micropython/nrf-ble-central-gatt.patch"
       - "patches/micropython/nrf-ble-raw-uuid.patch"
       - "patches/micropython/nrf-ble-declaration-handle.patch"
+      - "patches/micropython/nrf-spi-i2c-resource-management.patch"
       - "micropython"
 
 permissions:
@@ -60,6 +62,8 @@ jobs:
           git apply ../patches/micropython/nrf-ble-raw-uuid.patch
           git apply --check ../patches/micropython/nrf-ble-declaration-handle.patch
           git apply ../patches/micropython/nrf-ble-declaration-handle.patch
+          git apply --check ../patches/micropython/nrf-spi-i2c-resource-management.patch
+          git apply ../patches/micropython/nrf-spi-i2c-resource-management.patch
 
       - name: Setup nRF build environment
         working-directory: micropython

@@ -68,6 +68,14 @@ reports the measured acceleration/gyro values, and deinitializes SPI at exit.
 The HY0020 sensor test passed on hardware using SPI1; SPI0/I2C0
 resource-sharing problems are tracked separately in Issue #19.
 
+The shared nRF SPI/I2C patch under review in Issue #19 adds
+`OSError(EBUSY)` for competing SPI0/TWI0 initialization, an explicit
+`I2C.deinit()`, and a bounded SPI transfer wait. To validate the fix, wire
+SPI0 MOSI to MISO, configure I2C0 pull-ups, and run
+`tests/common/nrf_spi_i2c_shared.py`. The **new** alternating-bus test is
+pending HY0020 hardware verification; the previous SPI1 sensor result does
+not establish SPI0/TWI0 correctness.
+
 **Remaining UART handoff hardware check:** put a UART0 transmission in
 `boot.py`, verify that it completes, and verify REPL mode can reconnect
 using TX=P0.06/RX=P0.08 while normal mode's `main.py` can reconfigure

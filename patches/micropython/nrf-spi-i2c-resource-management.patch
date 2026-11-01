@@ -227,3 +227,15 @@ diff --git a/ports/nrf/modules/machine/i2c.c b/ports/nrf/modules/machine/i2c.c
      .transfer = mp_machine_i2c_transfer_adaptor,
      .transfer_single = machine_hard_i2c_transfer_single,
  };
+diff --git a/ports/nrf/modules/machine/spi.h b/ports/nrf/modules/machine/spi.h
+--- a/ports/nrf/modules/machine/spi.h
++++ b/ports/nrf/modules/machine/spi.h
+@@ -29,7 +29,7 @@
+ typedef struct _machine_hard_spi_obj_t machine_hard_spi_obj_t;
+ 
+ void spi_init0(void);
+-void spi_transfer(const machine_hard_spi_obj_t *self,
++void spi_transfer(machine_hard_spi_obj_t *self,
+     size_t len,
+     const void *src,
+     void *dest);

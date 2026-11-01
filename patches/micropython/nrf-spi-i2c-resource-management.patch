@@ -1,0 +1,229 @@
+diff --git a/ports/nrf/modules/machine/spi.c b/ports/nrf/modules/machine/spi.c
+--- a/ports/nrf/modules/machine/spi.c
++++ b/ports/nrf/modules/machine/spi.c
+@@ -30,6 +30,7 @@
+ #include <string.h>
+ 
+ #include "py/runtime.h"
++#include "py/mperrno.h"
+ 
+ #if MICROPY_PY_MACHINE_SPI
+ 
+@@ -92,6 +93,8 @@
+ #define NRF_SPI_FREQ_8M             NRF_SPIM_FREQ_8M
+ 
+ #define nrfx_spi_init               nrfx_spim_init
++#define nrfx_spi_init_check         nrfx_spim_init_check
++#define nrfx_spi_evt_t             nrfx_spim_evt_t
+ #define nrfx_spi_uninit             nrfx_spim_uninit
+ #define nrfx_spi_xfer               nrfx_spim_xfer
+ 
+@@ -101,6 +104,7 @@
+     mp_obj_base_t base;
+     const nrfx_spi_t *p_spi;       // Driver instance
+     nrfx_spi_config_t *p_config;   // pointer to volatile part
++    volatile bool transfer_done;
+ } machine_hard_spi_obj_t;
+ 
+ static const nrfx_spi_t machine_spi_instances[] = {
+@@ -116,7 +120,7 @@
+ 
+ static nrfx_spi_config_t configs[MP_ARRAY_SIZE(machine_spi_instances)];
+ 
++static machine_hard_spi_obj_t machine_hard_spi_obj[] = {
+-static const machine_hard_spi_obj_t machine_hard_spi_obj[] = {
+     {{&machine_spi_type}, .p_spi = &machine_spi_instances[0], .p_config = &configs[0]},
+     {{&machine_spi_type}, .p_spi = &machine_spi_instances[1], .p_config = &configs[1]},
+     #if defined(NRF52_SERIES)
+@@ -151,7 +155,36 @@
+     }
+ }
+ 
++// Report shared-resource conflicts rather than transferring with a stale driver.
++static void spi_raise_nrfx_error(nrfx_err_t err) {
++    if (err == NRFX_ERROR_BUSY || err == NRFX_ERROR_INVALID_STATE) {
++        mp_raise_OSError(MP_EBUSY);
++    }
++    #if NRFX_API_VER_AT_LEAST(3, 2, 0)
++    if (err == NRFX_ERROR_ALREADY) {
++        mp_raise_OSError(MP_EBUSY);
++    }
++    #endif
++    if (err == NRFX_ERROR_INVALID_PARAM) {
++        mp_raise_OSError(MP_EINVAL);
++    }
++    mp_raise_OSError(MP_EIO);
++}
++
++static void spi_event_handler(nrfx_spi_evt_t const *event, void *context) {
++    (void)event;
++    machine_hard_spi_obj_t *self = context;
++    self->transfer_done = true;
++}
++
++void spi_transfer(machine_hard_spi_obj_t *self, size_t len, const void *src, void *dest) {
++    if (!nrfx_spi_init_check(self->p_spi)) {
++        mp_raise_OSError(MP_EIO);
++    }
++    if (len == 0) {
++        return;
++    }
++
+-void spi_transfer(const machine_hard_spi_obj_t *self, size_t len, const void *src, void *dest) {
+     nrfx_spi_xfer_desc_t xfer_desc = {
+         .p_tx_buffer = src,
+         .tx_length = len,
+@@ -159,7 +192,25 @@
+         .rx_length = len
+     };
+ 
++    // Use the interrupt-driven driver path: the blocking nrfx SPI path
++    // otherwise spins forever if READY/END never arrives.
++    self->transfer_done = false;
++    nrfx_err_t err = nrfx_spi_xfer(self->p_spi, &xfer_desc, 0);
++    if (err != NRFX_SUCCESS) {
++        spi_raise_nrfx_error(err);
++    }
++
++    // Conservative bound for 125 kHz transfers, including IRQ overhead.
++    mp_uint_t start = mp_hal_ticks_ms();
++    uint32_t timeout_ms = 1000 + (uint32_t)(len / 8);
++    while (!self->transfer_done) {
++        if ((mp_uint_t)(mp_hal_ticks_ms() - start) >= timeout_ms) {
++            // Release only this SPI instance; do not disturb a TWI owner.
++            nrfx_spi_uninit(self->p_spi);
++            mp_raise_OSError(MP_ETIMEDOUT);
++        }
++        mp_event_wait_ms(1);
++    }
+-    nrfx_spi_xfer(self->p_spi, &xfer_desc, 0);
+ }
+ 
+ /******************************************************************************/
+@@ -231,7 +282,7 @@
+ 
+     // get static peripheral object
+     int spi_id = spi_find(args[ARG_NEW_id].u_obj);
++    machine_hard_spi_obj_t *self = &machine_hard_spi_obj[spi_id];
+-    const machine_hard_spi_obj_t *self = &machine_hard_spi_obj[spi_id];
+ 
+     // here we would check the sck/mosi/miso pins and configure them
+     if (args[ARG_NEW_sck].u_obj != MP_OBJ_NULL
+@@ -333,14 +384,13 @@
+         self->p_config->bit_order = (args[ARG_INIT_firstbit].u_int == 0) ? NRF_SPI_BIT_ORDER_MSB_FIRST : NRF_SPI_BIT_ORDER_LSB_FIRST;
+     }
+ 
++    // Reconfiguration may release this SPI instance, never another driver.
++    if (nrfx_spi_init_check(self->p_spi)) {
+-    // Set context to this instance of SPI
+-    nrfx_err_t err_code = nrfx_spi_init(self->p_spi, self->p_config, NULL, (void *)self);
+-
+-    if (err_code == NRFX_ERROR_INVALID_STATE) {
+-        // Instance already initialized, deinitialize first.
+         nrfx_spi_uninit(self->p_spi);
++    }
++    nrfx_err_t err_code = nrfx_spi_init(self->p_spi, self->p_config, spi_event_handler, (void *)self);
++    if (err_code != NRFX_SUCCESS) {
++        spi_raise_nrfx_error(err_code);
+-        // Initialize again.
+-        nrfx_spi_init(self->p_spi, self->p_config, NULL, (void *)self);
+     }
+ }
+ 
+@@ -363,11 +413,13 @@
+ 
+ static void machine_hard_spi_deinit(mp_obj_base_t *self_in) {
+     const machine_hard_spi_obj_t *self = MP_OBJ_TO_PTR(self_in);
++    if (nrfx_spi_init_check(self->p_spi)) {
++        nrfx_spi_uninit(self->p_spi);
++    }
+-    nrfx_spi_uninit(self->p_spi);
+ }
+ 
+ static void machine_hard_spi_transfer(mp_obj_base_t *self_in, size_t len, const uint8_t *src, uint8_t *dest) {
++    machine_hard_spi_obj_t *self = (machine_hard_spi_obj_t *)self_in;
+-    const machine_hard_spi_obj_t *self = (machine_hard_spi_obj_t *)self_in;
+     spi_transfer(self, len, src, dest);
+ }
+ 
+diff --git a/ports/nrf/modules/machine/i2c.c b/ports/nrf/modules/machine/i2c.c
+--- a/ports/nrf/modules/machine/i2c.c
++++ b/ports/nrf/modules/machine/i2c.c
+@@ -48,6 +48,7 @@
+ #define nrfx_twi_config_t nrfx_twim_config_t
+ 
+ #define nrfx_twi_init     nrfx_twim_init
++#define nrfx_twi_init_check nrfx_twim_init_check
+ #define nrfx_twi_uninit   nrfx_twim_uninit
+ #define nrfx_twi_enable   nrfx_twim_enable
+ #define nrfx_twi_xfer     nrfx_twim_xfer
+@@ -113,6 +114,21 @@
+     mp_printf(print, "I2C(%u, timeout=%u)", self->p_twi.drv_inst_idx, self->timeout);
+ }
+ 
++static void i2c_raise_nrfx_error(nrfx_err_t err) {
++    if (err == NRFX_ERROR_BUSY || err == NRFX_ERROR_INVALID_STATE) {
++        mp_raise_OSError(MP_EBUSY);
++    }
++    #if NRFX_API_VER_AT_LEAST(3, 2, 0)
++    if (err == NRFX_ERROR_ALREADY) {
++        mp_raise_OSError(MP_EBUSY);
++    }
++    #endif
++    if (err == NRFX_ERROR_INVALID_PARAM) {
++        mp_raise_OSError(MP_EINVAL);
++    }
++    mp_raise_OSError(MP_EIO);
++}
++
+ /******************************************************************************/
+ /* MicroPython bindings for machine API                                       */
+ 
+@@ -161,11 +177,17 @@
+     config.hold_bus_uninit = false;
+     config.interrupt_priority = 6;
+ 
++    // Reconfigure this TWI instance only when it already owns its driver.
++    // In particular, do not uninit an uninitialized TWI over an active SPI.
++    if (nrfx_twi_init_check(&self->p_twi)) {
++        nrfx_twi_uninit(&self->p_twi);
++    }
+-    // First reset the TWI
+-    nrfx_twi_uninit(&self->p_twi);
+ 
+     // Set context to this object, use non-blocking mode with event handler.
++    nrfx_err_t err = nrfx_twi_init(&self->p_twi, &config, twi_event_handler, (void *)self);
++    if (err != NRFX_SUCCESS) {
++        i2c_raise_nrfx_error(err);
++    }
+-    nrfx_twi_init(&self->p_twi, &config, twi_event_handler, (void *)self);
+ 
+     return MP_OBJ_FROM_PTR(self);
+ }
+@@ -173,6 +195,9 @@
+ int machine_hard_i2c_transfer_single(mp_obj_base_t *self_in, uint16_t addr, size_t len, uint8_t *buf, unsigned int flags) {
+     machine_hard_i2c_obj_t *self = (machine_hard_i2c_obj_t *)self_in;
+ 
++    if (!nrfx_twi_init_check(&self->p_twi)) {
++        return -MP_EIO;
++    }
+     nrfx_twi_enable(&self->p_twi);
+ 
+     self->xfer_done = false;
+@@ -230,7 +255,16 @@
+     return transfer_ret;
+ }
+ 
++static void machine_hard_i2c_deinit(mp_obj_base_t *self_in) {
++    machine_hard_i2c_obj_t *self = (machine_hard_i2c_obj_t *)self_in;
++    if (nrfx_twi_init_check(&self->p_twi)) {
++        nrfx_twi_uninit(&self->p_twi);
++    }
++    self->xfer_done = false;
++}
++
+ static const mp_machine_i2c_p_t machine_hard_i2c_p = {
++    .deinit = machine_hard_i2c_deinit,
+     .transfer = mp_machine_i2c_transfer_adaptor,
+     .transfer_single = machine_hard_i2c_transfer_single,
+ };

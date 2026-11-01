@@ -20,6 +20,7 @@ a flashed firmware, and a `test_config.py` adjusted to its pin map.
 | `uart_loopback.py` | TX wired to RX; UART not in use for console; writes `/uart_test.txt` |
 | `i2c_sht3x.py` | Sensirion SHT30/SHT31/SHT35 on 0x44 or 0x45, SDA/SCL pull-ups |
 | `spi_loopback.py` | MOSI wired to MISO (hardware SPI) |
+| `nrf_spi_i2c_shared.py` | nRF SPI0 MOSI wired to MISO, I2C0 SDA/SCL pull-ups; tests conflict EBUSY, 10 alternating cycles, repeated deinit |
 | `ble_peripheral_write.py` | BLE Peripheral advertising; show connect/disconnect and GATT Write payloads on REPL; requires a BLE Central to write |
 | `ble_central_scan.py` | Repeating 1-second BLE advertisements scan: device name + advertised Primary Service UUID list; stop with Ctrl-C |
 | `ble_central_gatt_rw.py` | Match NUS-to-UART peer by advertised Primary Service UUID, perform GATT Read/Write and UART check, write `/ble_central_gatt_test.txt` |
@@ -32,6 +33,23 @@ BLE GATT test requires a peer exposing `0bf10001-7dfb-4e4a-b734-f40d695f67ab`
 
 The original `tests/isp1807_ble_*.py` are retained unchanged as ISP1807
 historical/known-wiring regression examples. Generalized scripts use `test_config.py` for wiring and the Central peer's Primary Service UUID rather than a fixed MAC. `ble_central_scan.py` uses `ble_parse_adv.py` to decode AD types 0x08/0x09 (names) and 0x02/0x03/0x06/0x07 (advertised service UUIDs). It does not connect to devices or enumerate their full GATT database. The Central peer must actually advertise the configured UUID; if the UUID is omitted due to the 31-byte legacy advertising limit, automatic matching is not possible with this test.
+
+## Shared nRF SPI0/I2C0 regression (Issue #19)
+
+The nRF peripheral instances `SPI0` and `I2C(0)` (TWI0) compete for the
+same hardware resource. The patch in `patches/micropython/nrf-spi-i2c-resource-management.patch`
+makes the attempted second initialization raise `OSError(errno.EBUSY)` without
+preempting the first driver. The application releases ownership with the
+corresponding `deinit()` call; repeated `deinit()` is harmless.
+
+For the hardware test, configure SPI loopback pins and an I2C bus with pull-ups
+in `tests/common/test_config.py`. Run `nrf_spi_i2c_shared.py`; it forces
+instance 0 for both buses, exercises expected busy errors in each direction,
+performs SPI loopback and I2C scan, and alternates 10 times.
+`RESULT: PASS` requires actual device execution; successful CI compilation is
+**not** hardware verification. If a transfer times out, it should raise
+`OSError(ETIMEDOUT)` instead of hanging REPL. This test does not verify a
+sensor's returned data.
 
 ## Board notes
 - ISP1807: REPL uses native USB CDC, so hardware UART0 is available for tests.

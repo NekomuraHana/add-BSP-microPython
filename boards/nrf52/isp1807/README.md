@@ -203,6 +203,17 @@ python3 scripts/merge_isp1807_swd.py \
 content; physical SWD boot, USB CDC/REPL, BLE, GPIO and file-system operation
 on bootloader-free hardware still require hardware verification.
 
+## SPI0/TWI0 shared resource (Issue #19)
+
+Like nRF52832, nRF52840 uses shared peripheral resources for SPI0 and TWI0.
+The shared nRF driver patch makes conflicting initialization raise
+`OSError(EBUSY)`, and allows each driver to release its own instance using
+`deinit()`. It also uses a bounded SPI transfer wait to avoid trapping REPL
+inside nrfx blocking polling. Use
+`tests/common/nrf_spi_i2c_shared.py` (with board-specific pins in
+`test_config.py`) for manual verification. The fix has **not** yet been
+reproduced/verified on ISP1807 hardware; successful CI is compilation only.
+
 ## Local build
 
 The local helper mirrors the nRF build sequence used by CI, but does not install

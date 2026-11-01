@@ -48,6 +48,32 @@ uart = UART(
 )
 ```
 
+## SPI sensor smoke test
+
+The reusable test `tests/nrf_spi_lsm6ds3.py` checks an **LSM6DS3**
+accelerometer/gyroscope on SPI1 using a WHO_AM_I read (`0x69`), sensor
+configuration writes, and a 12-byte burst read of gyro/acceleration samples.
+It defaults to the following HY0020 wiring:
+
+| LSM6DS3 | HY0020 |
+| --- | --- |
+| SA0 / SDO (MISO) | P0.02 |
+| CS (active low) | P0.03 |
+| SDA / SDI (MOSI) | P0.04 |
+| SCL / SPC (SCK) | P0.05 |
+
+Also connect 3.3 V and GND. Change the pin constants at the top of the
+shared test for a different board. The test configures SPI mode 3 at 1 MHz,
+reports the measured acceleration/gyro values, and deinitializes SPI at exit.
+The HY0020 sensor test passed on hardware using SPI1; SPI0/I2C0
+resource-sharing problems are tracked separately in Issue #19.
+
+**Remaining UART handoff hardware check:** put a UART0 transmission in
+`boot.py`, verify that it completes, and verify REPL mode can reconnect
+using TX=P0.06/RX=P0.08 while normal mode's `main.py` can reconfigure
+UART0 with different pins and baud. A successful build does not replace this
+real-device check.
+
 ## VS Code / MicroPico
 
 When using the **MicroPico** VS Code extension with HY0020's UART REPL,

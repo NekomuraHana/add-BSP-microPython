@@ -1,0 +1,116 @@
+diff --git a/ports/nrf/main.c b/ports/nrf/main.c
+--- a/ports/nrf/main.c
++++ b/ports/nrf/main.c
+@@ -105,6 +105,11 @@
+     }
+ }
+ 
++// HY0020: return UART0 ownership to the startup selector after boot.py.
++#if defined(MICROPY_HW_UART_REPL_SELECT_PIN)
++extern void uart_boot_script_release(uint32_t timeout_ms);
++#endif
++
+ extern uint32_t _heap_start;
+ extern uint32_t _heap_end;
+ 
+@@ -115,6 +120,17 @@
+ 
+     MICROPY_BOARD_EARLY_INIT();
+ 
++    #if defined(MICROPY_HW_UART_REPL_SELECT_PIN)
++    NRF_P0->PIN_CNF[MICROPY_HW_UART_REPL_SELECT_PIN] =
++        (GPIO_PIN_CNF_DIR_Input << GPIO_PIN_CNF_DIR_Pos) |
++        (GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos) |
++        (GPIO_PIN_CNF_PULL_Pullup << GPIO_PIN_CNF_PULL_Pos);
++    for (volatile unsigned int settle = 0; settle < 1000; ++settle) {
++    }
++    const bool uart_repl_selected =
++        (NRF_P0->IN & (1UL << MICROPY_HW_UART_REPL_SELECT_PIN)) == 0;
++    #endif
++
+ soft_reset:
+ 
+     #if MICROPY_PY_TIME_TICKS
+@@ -162,17 +178,6 @@
+     uart_init0();
+     #endif
+ 
+-    #if MICROPY_HW_ENABLE_UART_REPL
+-    {
+-        mp_obj_t args[2] = {
+-            MP_OBJ_NEW_SMALL_INT(MICROPY_HW_UART_REPL),
+-            MP_OBJ_NEW_SMALL_INT(MICROPY_HW_UART_REPL_BAUD),
+-        };
+-        mp_obj_t uart = MP_OBJ_TYPE_GET_SLOT(&machine_uart_type, make_new)((mp_obj_t)&machine_uart_type, MP_ARRAY_SIZE(args), 0, args);
+-        mp_os_dupterm_obj.fun.var(1, &uart);
+-    }
+-    #endif
+-
+     pin_init0();
+ 
+     #if MICROPY_HW_ENABLE_INTERNAL_FLASH_STORAGE
+@@ -249,12 +254,37 @@
+     ret_code = pyexec_file_if_exists("boot.py");
+     #endif
+ 
++    // boot.py may use UART0 with arbitrary pins/baud. Wait up to 50 ms
++    // for TX to finish, then release it before entering either mode.
++    #if defined(MICROPY_HW_UART_REPL_SELECT_PIN)
++    uart_boot_script_release(50);
++    #endif
++
++    #if MICROPY_HW_ENABLE_UART_REPL
++    #if defined(MICROPY_HW_UART_REPL_SELECT_PIN)
++    if (uart_repl_selected) {
++    #else
++    {
++    #endif
++        mp_obj_t args[2] = {
++            MP_OBJ_NEW_SMALL_INT(MICROPY_HW_UART_REPL),
++            MP_OBJ_NEW_SMALL_INT(MICROPY_HW_UART_REPL_BAUD),
++        };
++        mp_obj_t uart = MP_OBJ_TYPE_GET_SLOT(&machine_uart_type, make_new)((mp_obj_t)&machine_uart_type, MP_ARRAY_SIZE(args), 0, args);
++        mp_os_dupterm_obj.fun.var(1, &uart);
++    }
++    #endif
++
+     #if MICROPY_HW_ENABLE_USBDEV && MICROPY_HW_USB_CDC
+     usb_cdc_init();
+     #endif
+ 
+     #if MICROPY_VFS || MICROPY_MBFS || MICROPY_MODULE_FROZEN
++    #if defined(MICROPY_HW_UART_REPL_SELECT_PIN)
++    if (!uart_repl_selected && pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL && ret_code != 0) {
++    #else
+     if (pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL && ret_code != 0) {
++    #endif
+         pyexec_file_if_exists("main.py");
+     }
+     #endif
+diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c
+--- a/ports/nrf/modules/machine/uart.c
++++ b/ports/nrf/modules/machine/uart.c
+@@ -129,6 +129,23 @@
+     }
+ }
+ 
++// At the boot.py boundary, release UART0 even if Python forgot deinit().
++// A TX-in-progress wait is bounded so a broken peripheral cannot hang boot.
++void uart_boot_script_release(uint32_t timeout_ms) {
++    machine_uart_obj_t *self = &machine_uart_obj[0];
++    if (!self->initialized) {
++        return;
++    }
++    uint32_t started = mp_hal_ticks_ms();
++    while (nrfx_uart_tx_in_progress(self->p_uart) &&
++           (uint32_t)(mp_hal_ticks_ms() - started) < timeout_ms) {
++        mp_event_wait_ms(1);
++    }
++    nrfx_uart_uninit(self->p_uart);
++    self->initialized = false;
++    self->attached_to_repl = false;
++}
++
+ void uart_attach_to_repl(machine_uart_obj_t *self, bool attached) {
+     self->attached_to_repl = attached;
+ }

@@ -1,0 +1,26 @@
+id = "hy0020"
+name = "Akizuki AE-HY0020-DIP"
+vendor = "Akizuki Denshi"
+family = "nrf52"
+soc = "nrf52832"
+backend = "micropython-nrf"
+micropython_board = "HY0020"
+softdevice = "s132"
+softdevice_package = "s132_nrf52_6_1_1"
+
+[board]
+tested_product = "AE-HY0020-DIP / Akizuki 131342"
+uart_console = true
+uart_tx = "P0.06"
+uart_rx = "P0.08"
+repl_mode_pin = "P0.12"
+dfu_pin = "P0.20"
+bootloader_start = 0x74000
+
+[module]
+name = "HY0020"
+vendor = "FDK"
+flash_bytes = 524288
+ram_bytes = 65536
+has_usb = false
+has_nfc = true

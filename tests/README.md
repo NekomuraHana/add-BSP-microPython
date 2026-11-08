@@ -51,6 +51,29 @@ performs SPI loopback and I2C scan, and alternates 10 times.
 `OSError(ETIMEDOUT)` instead of hanging REPL. This test does not verify a
 sensor's returned data.
 
+### Soft-reset recovery (requires an actual Ctrl+D reboot)
+
+`spi_init0()` and `i2c_init0()` now deinitialize any still-initialized
+nrfx SPI/TWI instances on **MicroPython soft reset**, even if the Python script
+forgot `deinit()`. This also releases the PRS ownership for the next VM
+session. Ordinary script completion without soft reset does **not** implicitly
+release the bus; use explicit `deinit()` when switching SPI0 and I2C0 within
+one session.
+
+Manual check on each board:
+1. At the REPL, initialize `I2C(0, ...)` with real SCL/SDA pins; **do not**
+   call `i2c.deinit()`.
+2. Press Ctrl+D to actually soft-reboot MicroPython; verify the soft-reboot
+   banner appears.
+3. Initialize `SPI(0, ...)` with real SCK/MOSI/MISO pins; no `OSError: 16`
+   should occur. Run an SPI loopback transfer, then omit `spi.deinit()`.
+4. Ctrl+D again; check that `I2C(0, ...)` initializes and scans without
+   `EBUSY`. Repeat both directions.
+
+A host tool's "run current file" may or may not trigger a soft reset; use a
+visible Ctrl+D REPL reboot for this test. A normal hardware reset also clears
+the peripheral but is **not** sufficient proof of soft-reset cleanup.
+
 ## Board notes
 - ISP1807: REPL uses native USB CDC, so hardware UART0 is available for tests.
   SHT31 example wiring previously tested: SCL=P0.26, SDA=P0.14.

@@ -47,7 +47,7 @@ diff --git a/ports/nrf/modules/machine/spi.c b/ports/nrf/modules/machine/spi.c
 +        self->transfer_done = false;
 +    }
  }
-@@ -151,7 +155,36 @@
+@@ -151,7 +164,36 @@
      }
  }
  
@@ -85,7 +85,7 @@ diff --git a/ports/nrf/modules/machine/spi.c b/ports/nrf/modules/machine/spi.c
      nrfx_spi_xfer_desc_t xfer_desc = {
          .p_tx_buffer = src,
          .tx_length = len,
-@@ -159,7 +192,25 @@
+@@ -159,7 +201,25 @@
          .rx_length = len
      };
  
@@ -112,7 +112,7 @@ diff --git a/ports/nrf/modules/machine/spi.c b/ports/nrf/modules/machine/spi.c
  }
  
  /******************************************************************************/
-@@ -231,7 +282,7 @@
+@@ -231,7 +291,7 @@
  
      // get static peripheral object
      int spi_id = spi_find(args[ARG_NEW_id].u_obj);
@@ -121,7 +121,7 @@ diff --git a/ports/nrf/modules/machine/spi.c b/ports/nrf/modules/machine/spi.c
  
      // here we would check the sck/mosi/miso pins and configure them
      if (args[ARG_NEW_sck].u_obj != MP_OBJ_NULL
-@@ -333,14 +384,13 @@
+@@ -333,14 +393,13 @@
          self->p_config->bit_order = (args[ARG_INIT_firstbit].u_int == 0) ? NRF_SPI_BIT_ORDER_MSB_FIRST : NRF_SPI_BIT_ORDER_LSB_FIRST;
      }
  
@@ -142,7 +142,7 @@ diff --git a/ports/nrf/modules/machine/spi.c b/ports/nrf/modules/machine/spi.c
      }
  }
  
-@@ -363,11 +413,13 @@
+@@ -363,11 +422,13 @@
  
  static void machine_hard_spi_deinit(mp_obj_base_t *self_in) {
      const machine_hard_spi_obj_t *self = MP_OBJ_TO_PTR(self_in);
@@ -181,7 +181,7 @@ diff --git a/ports/nrf/modules/machine/i2c.c b/ports/nrf/modules/machine/i2c.c
 +        self->xfer_done = false;
 +    }
  }
-@@ -113,6 +114,21 @@
+@@ -113,6 +123,21 @@
      mp_printf(print, "I2C(%u, timeout=%u)", self->p_twi.drv_inst_idx, self->timeout);
  }
  
@@ -203,7 +203,7 @@ diff --git a/ports/nrf/modules/machine/i2c.c b/ports/nrf/modules/machine/i2c.c
  /******************************************************************************/
  /* MicroPython bindings for machine API                                       */
  
-@@ -161,11 +177,17 @@
+@@ -161,11 +186,17 @@
      config.hold_bus_uninit = false;
      config.interrupt_priority = 6;
  
@@ -224,7 +224,7 @@ diff --git a/ports/nrf/modules/machine/i2c.c b/ports/nrf/modules/machine/i2c.c
  
      return MP_OBJ_FROM_PTR(self);
  }
-@@ -173,6 +195,9 @@
+@@ -173,6 +204,9 @@
  int machine_hard_i2c_transfer_single(mp_obj_base_t *self_in, uint16_t addr, size_t len, uint8_t *buf, unsigned int flags) {
      machine_hard_i2c_obj_t *self = (machine_hard_i2c_obj_t *)self_in;
  
@@ -234,7 +234,7 @@ diff --git a/ports/nrf/modules/machine/i2c.c b/ports/nrf/modules/machine/i2c.c
      nrfx_twi_enable(&self->p_twi);
  
      self->xfer_done = false;
-@@ -230,7 +255,16 @@
+@@ -230,7 +264,16 @@
      return transfer_ret;
  }
  

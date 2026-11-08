@@ -35,6 +35,18 @@ diff --git a/ports/nrf/modules/machine/spi.c b/ports/nrf/modules/machine/spi.c
      {{&machine_spi_type}, .p_spi = &machine_spi_instances[0], .p_config = &configs[0]},
      {{&machine_spi_type}, .p_spi = &machine_spi_instances[1], .p_config = &configs[1]},
      #if defined(NRF52_SERIES)
+@@ -130,2 +134,11 @@
+ void spi_init0(void) {
++    // Soft reset restarts the VM, but nrfx state and PRS ownership survive.
++    // Release only SPI instances owned by the previous VM session.
++    for (size_t i = 0; i < MP_ARRAY_SIZE(machine_hard_spi_obj); ++i) {
++        machine_hard_spi_obj_t *self = &machine_hard_spi_obj[i];
++        if (nrfx_spi_init_check(self->p_spi)) {
++            nrfx_spi_uninit(self->p_spi);
++        }
++        self->transfer_done = false;
++    }
+ }
 @@ -151,7 +155,36 @@
      }
  }
@@ -157,6 +169,18 @@ diff --git a/ports/nrf/modules/machine/i2c.c b/ports/nrf/modules/machine/i2c.c
  #define nrfx_twi_uninit   nrfx_twim_uninit
  #define nrfx_twi_enable   nrfx_twim_enable
  #define nrfx_twi_xfer     nrfx_twim_xfer
+@@ -93,2 +94,11 @@
+ void i2c_init0(void) {
++    // A VM soft reset does not clear nrfx driver state or PRS ownership.
++    // Release only TWI instances held by the previous VM session.
++    for (size_t i = 0; i < MP_ARRAY_SIZE(machine_hard_i2c_obj); ++i) {
++        machine_hard_i2c_obj_t *self = &machine_hard_i2c_obj[i];
++        if (nrfx_twi_init_check(&self->p_twi)) {
++            nrfx_twi_uninit(&self->p_twi);
++        }
++        self->xfer_done = false;
++    }
+ }
 @@ -113,6 +114,21 @@
      mp_printf(print, "I2C(%u, timeout=%u)", self->p_twi.drv_inst_idx, self->timeout);
  }

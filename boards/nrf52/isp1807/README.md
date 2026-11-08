@@ -214,6 +214,12 @@ inside nrfx blocking polling. Use
 `test_config.py`) for manual verification. The fix has **not** yet been
 reproduced/verified on ISP1807 hardware; successful CI is compilation only.
 
+The patch also cleans up active SPI/TWI instances in their `*_init0()`
+hooks when MicroPython restarts the VM with Ctrl+D. This is a software
+reboot, not a peripheral hardware reset. Verify that SPI0 can be initialized
+after an un-deinitialized I2C0 from the previous REPL session, and vice versa.
+See `tests/README.md` for the test sequence.
+
 ## Local build
 
 The local helper mirrors the nRF build sequence used by CI, but does not install

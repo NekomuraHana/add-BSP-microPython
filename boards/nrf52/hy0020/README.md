@@ -48,6 +48,17 @@ uart = UART(
 )
 ```
 
+## SPI/I2C soft reset cleanup
+
+On a MicroPython Ctrl+D soft reboot, `spi_init0()` and `i2c_init0()`
+release previously initialized nrfx driver instances (including their PRS
+resource claims). This prevents a missing Python `deinit()` call from
+leaving `OSError: 16` across soft resets. It does not auto-release hardware
+when a Python script ends without a soft reset.
+
+On HY0020, verify using SPI0 **and** I2C0 (not the non-conflicting SPI1
+sensor example below). See `tests/README.md` for the Ctrl+D test sequence.
+
 ## SPI sensor smoke test
 
 The reusable test `tests/nrf_spi_lsm6ds3.py` checks an **LSM6DS3**

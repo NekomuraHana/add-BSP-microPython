@@ -25,6 +25,7 @@ MICROPYTHON_PATCHES = (
     ROOT / "patches" / "micropython" / "nrf-ble-central-gatt.patch",
     ROOT / "patches" / "micropython" / "nrf-ble-raw-uuid.patch",
     ROOT / "patches" / "micropython" / "nrf-ble-declaration-handle.patch",
+    ROOT / "patches" / "micropython" / "nrf-spi-i2c-resource-management.patch",
 )
 
 

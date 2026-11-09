@@ -48,6 +48,17 @@ uart = UART(
 )
 ```
 
+## SPI/I2C soft reset cleanup
+
+On a MicroPython Ctrl+D soft reboot, `spi_init0()` and `i2c_init0()`
+release previously initialized nrfx driver instances (including their PRS
+resource claims). This prevents a missing Python `deinit()` call from
+leaving `OSError: 16` across soft resets. It does not auto-release hardware
+when a Python script ends without a soft reset.
+
+On HY0020, verify using SPI0 **and** I2C0 (not the non-conflicting SPI1
+sensor example below). See `tests/README.md` for the Ctrl+D test sequence.
+
 ## SPI sensor smoke test
 
 The reusable test `tests/nrf_spi_lsm6ds3.py` checks an **LSM6DS3**
@@ -67,6 +78,14 @@ shared test for a different board. The test configures SPI mode 3 at 1 MHz,
 reports the measured acceleration/gyro values, and deinitializes SPI at exit.
 The HY0020 sensor test passed on hardware using SPI1; SPI0/I2C0
 resource-sharing problems are tracked separately in Issue #19.
+
+The shared nRF SPI/I2C patch under review in Issue #19 adds
+`OSError(EBUSY)` for competing SPI0/TWI0 initialization, an explicit
+`I2C.deinit()`, and a bounded SPI transfer wait. To validate the fix, wire
+SPI0 MOSI to MISO, configure I2C0 pull-ups, and run
+`tests/common/nrf_spi_i2c_shared.py`. The **new** alternating-bus test is
+pending HY0020 hardware verification; the previous SPI1 sensor result does
+not establish SPI0/TWI0 correctness.
 
 **Remaining UART handoff hardware check:** put a UART0 transmission in
 `boot.py`, verify that it completes, and verify REPL mode can reconnect

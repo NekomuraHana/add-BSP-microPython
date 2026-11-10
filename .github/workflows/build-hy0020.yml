@@ -53,6 +53,9 @@ jobs:
           git apply --check ../patches/micropython/nrf-spi-i2c-resource-management.patch
           git apply ../patches/micropython/nrf-spi-i2c-resource-management.patch
 
+      - name: Check SWD image generator syntax
+        run: python3 -m py_compile scripts/merge_hy0020_swd.py
+
       - name: Setup nRF build environment
         working-directory: micropython
         run: ./tools/ci.sh nrf_setup

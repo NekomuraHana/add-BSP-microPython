@@ -7,7 +7,12 @@ SOFTDEV_VERSION = 6.1.1
 LD_FILES += boards/nrf52832_512k_64k.ld
 
 # Match the Adafruit nRF52 bootloader memory map used by the Akizuki kit.
+HY0020_NO_BOOTLOADER ?= 0
+ifeq ($(HY0020_NO_BOOTLOADER),1)
+LD_FILES += $(BOARD_DIR)/hy0020_standalone.ld
+else
 LD_FILES += $(BOARD_DIR)/hy0020_adafruit_bootloader.ld
+endif
 
 NRF_DEFINES += -DNRF52832_XXAA
 

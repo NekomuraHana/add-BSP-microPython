@@ -13,7 +13,7 @@ FLASH_END = 0x80000
 APP_START = 0x26000
 APP_END = 0x68000
 RAM_START = 0x20000000
-RAM_END = 0x20010000
+RAM_END = 0x20010000\nNFCPINS_ADDR = 0x1000120C\nNFCPINS_GPIO = 0xFFFFFFFE
 
 
 def main():
@@ -56,18 +56,18 @@ def main():
 
     merged = IntelHex()
     merged.merge(sd, overlap="error")
-    merged.merge(app, overlap="error")
+    merged.merge(app, overlap="error")\n    # Standalone HY0020 favors GPIO over NFCT on shared P0.09/P0.10.\n    # The SWD programmer must support UICR programming; a full-chip erase\n    # removes this configuration and requires reprogramming.\n    for offset in range(4):\n        merged[NFCPINS_ADDR + offset] = (NFCPINS_GPIO >> (8 * offset)) & 0xFF
     args.output.parent.mkdir(parents=True, exist_ok=True)
     merged.write_hex_file(str(args.output))
 
     # Verify the produced artifact against both original inputs.
     check = IntelHex(str(args.output))
-    if len(check.addresses()) != len(sd_addrs) + len(app_addrs):
+    if len(check.addresses()) != len(sd_addrs) + len(app_addrs) + 4:
         raise SystemExit("merged HEX changed the address count")
     for source in (sd, app):
         if any(check[addr] != source[addr] for addr in source.addresses()):
             raise SystemExit("merged HEX differs from source")
-    print(f"Verified standalone SWD image: {args.output}")
+    if any(check[NFCPINS_ADDR + i] != ((NFCPINS_GPIO >> (8 * i)) & 0xFF) for i in range(4)):\n        raise SystemExit("UICR.NFCPINS GPIO configuration missing from SWD image")\n    print(f"Verified standalone SWD image: {args.output}")\n    print(f"UICR.NFCPINS: 0x{NFCPINS_GPIO:08X} (P0.09/P0.10 GPIO)")
     print(f"S132: 0x{min(sd_addrs):06X}-0x{max(sd_addrs):06X}")
     print(f"Application: 0x{min(app_addrs):06X}-0x{max(app_addrs):06X}")
 

@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/build-hy0020.yml"
       - "boards/nrf52/hy0020/**"
+      - "scripts/merge_hy0020_swd.py"
       - "patches/micropython/nrf-uart-pin-selection.patch"
       - "patches/micropython/nrf-ble-central-gatt.patch"
       - "patches/micropython/nrf-ble-raw-uuid.patch"
@@ -21,6 +22,7 @@ on:
     paths:
       - ".github/workflows/build-hy0020.yml"
       - "boards/nrf52/hy0020/**"
+      - "scripts/merge_hy0020_swd.py"
       - "patches/micropython/nrf-uart-pin-selection.patch"
       - "patches/micropython/nrf-ble-central-gatt.patch"
       - "patches/micropython/nrf-ble-raw-uuid.patch"
@@ -63,6 +65,7 @@ jobs:
              boards/nrf52/hy0020/mpconfigboard.mk \
              boards/nrf52/hy0020/pins.csv \
              boards/nrf52/hy0020/hy0020_adafruit_bootloader.ld \
+             boards/nrf52/hy0020/hy0020_standalone.ld \
              boards/nrf52/hy0020/manifest.py \
              boards/nrf52/hy0020/_boot.py \
              micropython/ports/nrf/boards/HY0020/
@@ -156,4 +159,38 @@ jobs:
             micropython/ports/nrf/build-HY0020-s132/firmware.hex
             micropython/ports/nrf/build-HY0020-s132/firmware.bin
             micropython/ports/nrf/build-HY0020-s132/firmware.elf
+          if-no-files-found: error
+
+      # Separate build directory keeps the existing Adafruit DFU binaries intact.
+      - name: Build bootloader-free HY0020 for SWD
+        working-directory: micropython
+        run: |
+          make -C ports/nrf BOARD=HY0020 SD=s132 \
+            HY0020_NO_BOOTLOADER=1 BUILD=build-HY0020-s132-standalone -j$(nproc)
+
+      - name: Verify standalone flash layout and create SWD image
+        run: |
+          python3 - <<'PY'
+          from intelhex import IntelHex
+          image = IntelHex("micropython/ports/nrf/build-HY0020-s132-standalone/firmware.hex")
+          addresses = image.addresses()
+          if not addresses or min(addresses) != 0x26000 or max(addresses) >= 0x68000:
+              raise SystemExit("Standalone app must fit 0x26000..0x67FFF")
+          print(f"Standalone application: 0x{min(addresses):05X}-0x{max(addresses):05X}")
+          print("LFS2 reserved: 0x68000-0x7FFFF (96 KiB)")
+          PY
+          python3 scripts/merge_hy0020_swd.py \
+            micropython/ports/nrf/drivers/bluetooth/s132_nrf52_6.1.1/s132_nrf52_6.1.1_softdevice.hex \
+            micropython/ports/nrf/build-HY0020-s132-standalone/firmware.hex \
+            micropython/ports/nrf/build-HY0020-s132-standalone/hy0020-s132-micropython-swd.hex
+
+      - name: Upload bootloader-free SWD firmware
+        uses: actions/upload-artifact@v7
+        with:
+          name: fdk-hy0020-micropython-swd
+          path: |
+            micropython/ports/nrf/build-HY0020-s132-standalone/firmware.hex
+            micropython/ports/nrf/build-HY0020-s132-standalone/firmware.bin
+            micropython/ports/nrf/build-HY0020-s132-standalone/firmware.elf
+            micropython/ports/nrf/build-HY0020-s132-standalone/hy0020-s132-micropython-swd.hex
           if-no-files-found: error

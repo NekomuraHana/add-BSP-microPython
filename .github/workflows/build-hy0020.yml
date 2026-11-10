@@ -105,8 +105,24 @@ jobs:
 
           if start < 0x26000:
               raise SystemExit("application overlaps S132")
-          if end > 0x6D000:
-              raise SystemExit("application exceeds Adafruit nRF52832 application boundary")
+          app_start = 0x26000
+          fs_start = 0x64000
+          fs_end = 0x74000
+          flash_end = 0x80000
+          expected_fs_size = 64 * 1024
+          assert fs_end - fs_start == expected_fs_size
+          assert fs_end <= flash_end
+          if start != app_start:
+              raise SystemExit(f"unexpected application start: 0x{start:05X}")
+          if end > fs_start:
+              raise SystemExit(f"application overlaps filesystem at 0x{fs_start:05X}")
+          app_capacity = fs_start - app_start
+          app_used = end - app_start
+          app_free = fs_start - end
+          print(f"Application reserved: {app_capacity / 1024:.1f} KiB")
+          print(f"Application used:     {app_used / 1024:.1f} KiB ({app_used / app_capacity:.1%})")
+          print(f"Application headroom: {app_free / 1024:.1f} KiB")
+          print(f"Filesystem reserved:  {expected_fs_size / 1024:.1f} KiB (0x{fs_start:05X}-0x{fs_end - 1:05X})")
           PY
 
       - name: Build serial DFU package

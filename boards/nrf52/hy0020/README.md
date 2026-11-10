@@ -119,17 +119,32 @@ reset when a clean VM is required.
 
 ## Flash layout
 
-The initial layout intentionally follows the Adafruit nRF52832 application
-boundary while retaining a small writable MicroPython filesystem:
+The current layout reserves 64 KiB for writable MicroPython LFS2 by reducing
+application space below the standard Adafruit nRF52832 application boundary.
+This requires DFU compatibility testing before deployment to devices with
+valuable user files:
 
 | Region | Range |
 | --- | --- |
 | S132 6.1.1 | 0x00000 - 0x25FFF |
-| MicroPython application | 0x26000 - 0x6CFFF |
-| MicroPython LFS | 0x6D000 - 0x73FFF (28 KiB) |
+| MicroPython application | 0x26000 - 0x63FFF (248 KiB) |
+| MicroPython LFS | 0x64000 - 0x73FFF (64 KiB) |
 | Adafruit bootloader / params / settings | 0x74000 - 0x7FFFF |
 
-No VfsROM partition is reserved in this first build.
+No VfsROM partition is reserved. The former filesystem started at 0x6D000;
+the new one starts at 0x64000. Updating from the interim 60 KiB
+layout also changes the filesystem start (0x65000 to 0x64000); back up scripts
+before that update as well. **Back up files on the old firmware before
+updating.** An existing filesystem may need reformatting after this layout
+change; do not assume user data survives the change. Furthermore, the new FS
+lies partly inside the Adafruit bootloader's normal application region
+(0x64000-0x6CFFF). **Preservation of this area across serial DFU has not been
+verified**; the new layout should not be treated as production-safe until
+DFU updates with existing files have been tested on hardware.
+
+After flashing a test device, check `os.statvfs("/")` for 16 blocks of 4096
+bytes (64 KiB total), verify file read/write and reboot persistence, then
+perform a serial DFU update while recording whether user files survive.
 
 ## Serial DFU artifact
 

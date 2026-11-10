@@ -2,7 +2,9 @@
 """Build and verify a one-shot SWD HEX containing S132/MBR and MicroPython.
 
 Uses Intel HEX address records, retaining the SoftDevice vector table at 0x0.
-Does not include an Adafruit bootloader, DFU settings, or UICR.\nThe 96 KiB LFS2 partition at 0x68000-0x7FFFF must remain unwritten.
+Includes UICR.NFCPINS=0xFFFFFFFE (P0.09/P0.10 GPIO, NFC disabled).
+Does not include an Adafruit bootloader or DFU settings.
+The 96 KiB LFS2 partition at 0x68000-0x7FFFF must remain unwritten.
 """
 import argparse
 from pathlib import Path
@@ -13,7 +15,9 @@ FLASH_END = 0x80000
 APP_START = 0x26000
 APP_END = 0x68000
 RAM_START = 0x20000000
-RAM_END = 0x20010000\nNFCPINS_ADDR = 0x1000120C\nNFCPINS_GPIO = 0xFFFFFFFE
+RAM_END = 0x20010000
+NFCPINS_ADDR = 0x1000120C
+NFCPINS_GPIO = 0xFFFFFFFE
 
 
 def main():
@@ -56,7 +60,12 @@ def main():
 
     merged = IntelHex()
     merged.merge(sd, overlap="error")
-    merged.merge(app, overlap="error")\n    # Standalone HY0020 favors GPIO over NFCT on shared P0.09/P0.10.\n    # The SWD programmer must support UICR programming; a full-chip erase\n    # removes this configuration and requires reprogramming.\n    for offset in range(4):\n        merged[NFCPINS_ADDR + offset] = (NFCPINS_GPIO >> (8 * offset)) & 0xFF
+    merged.merge(app, overlap="error")
+    # Standalone HY0020 favors GPIO over NFCT on shared P0.09/P0.10.
+    # The SWD programmer must support UICR programming; a full-chip erase
+    # removes this configuration and requires reprogramming.
+    for offset in range(4):
+        merged[NFCPINS_ADDR + offset] = (NFCPINS_GPIO >> (8 * offset)) & 0xFF
     args.output.parent.mkdir(parents=True, exist_ok=True)
     merged.write_hex_file(str(args.output))
 
@@ -67,7 +76,10 @@ def main():
     for source in (sd, app):
         if any(check[addr] != source[addr] for addr in source.addresses()):
             raise SystemExit("merged HEX differs from source")
-    if any(check[NFCPINS_ADDR + i] != ((NFCPINS_GPIO >> (8 * i)) & 0xFF) for i in range(4)):\n        raise SystemExit("UICR.NFCPINS GPIO configuration missing from SWD image")\n    print(f"Verified standalone SWD image: {args.output}")\n    print(f"UICR.NFCPINS: 0x{NFCPINS_GPIO:08X} (P0.09/P0.10 GPIO)")
+    if any(check[NFCPINS_ADDR + i] != ((NFCPINS_GPIO >> (8 * i)) & 0xFF) for i in range(4)):
+        raise SystemExit("UICR.NFCPINS GPIO configuration missing from SWD image")
+    print(f"Verified standalone SWD image: {args.output}")
+    print(f"UICR.NFCPINS: 0x{NFCPINS_GPIO:08X} (P0.09/P0.10 GPIO)")
     print(f"S132: 0x{min(sd_addrs):06X}-0x{max(sd_addrs):06X}")
     print(f"Application: 0x{min(app_addrs):06X}-0x{max(app_addrs):06X}")
 

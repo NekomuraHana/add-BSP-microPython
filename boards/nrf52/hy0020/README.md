@@ -179,10 +179,10 @@ make -C micropython/ports/nrf BOARD=HY0020 SD=s132 \
 ```
 
 Use an SWD probe (such as J-Link) to program the merged HEX. Serial
-Adafruit DFU cannot install the standalone firmware.
+Adafruit DFU cannot install the standalone firmware. After programming,\n**power-cycle** the module and verify with J-Link Commander\n`mem32 0x1000120C 1` (expected `FFFFFFFE`). Flash erases/recover\noperations can erase the UICR setting. Switching back to NFC mode requires\nerasing UICR first, which may require backing up and reflashing firmware and\nfilesystem. Do not connect an NFC antenna while using the GPIO configuration;\nNFC overvoltage protection is disabled.
 
 Hardware checks before merge: cold boot, P0.12 LOW/HIGH REPL/application
-modes, Issue #18 reset-time selector behavior, UART0 handoff,
+modes, Issue #18 reset-time selector behavior, UART0 handoff,\nP0.09/P0.10 GPIO I2C scan after cold boot,
 `os.statvfs("/")` (24 x 4096-byte blocks), file write/read and reset
 persistence, BLE/S132 initialization, and bootloader-free SWD reflashing.
 CI validation is not a substitute for these physical board tests.

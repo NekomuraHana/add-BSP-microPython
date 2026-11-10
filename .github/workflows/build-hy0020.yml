@@ -106,10 +106,10 @@ jobs:
           if start < 0x26000:
               raise SystemExit("application overlaps S132")
           app_start = 0x26000
-          fs_start = 0x65000
+          fs_start = 0x64000
           fs_end = 0x74000
           flash_end = 0x80000
-          expected_fs_size = 60 * 1024
+          expected_fs_size = 64 * 1024
           assert fs_end - fs_start == expected_fs_size
           assert fs_end <= flash_end
           if start != app_start:

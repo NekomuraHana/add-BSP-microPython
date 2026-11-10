@@ -2,8 +2,8 @@
  * Flash layout for AE-HY0020-DIP with the Adafruit nRF52 bootloader.
  *
  * S132 v6.1.1 application start: 0x26000
- * MicroPython application end: 0x65000 (below Adafruit's 0x6D000 limit)
- * Writable MicroPython filesystem: 0x65000-0x74000 (60 KiB)
+ * MicroPython application end: 0x64000 (below Adafruit's 0x6D000 limit)
+ * Writable MicroPython filesystem: 0x64000-0x74000 (64 KiB)
  * Adafruit bootloader start: 0x74000
  * Flash end: 0x80000
  *
@@ -13,9 +13,9 @@
 
 _bootloader_tail_size = 0xC000;
 
-/* Shrink the application reservation to 0x26000-0x65000 to reserve 60 KiB
+/* Shrink the application reservation to 0x26000-0x64000 to reserve 64 KiB
  * for MicroPython LFS2. This extends writable storage into the Adafruit
  * standard application range: DFU file preservation MUST be hardware-tested.
  */
 _micropy_hw_romfs_part0_size = 0;
-_fs_size = 0xF000;
+_fs_size = 0x10000;

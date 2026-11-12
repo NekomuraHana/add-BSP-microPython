@@ -146,6 +146,47 @@ After flashing a test device, check `os.statvfs("/")` for 16 blocks of 4096
 bytes (64 KiB total), verify file read/write and reboot persistence, then
 perform a serial DFU update while recording whether user files survive.
 
+## Standalone SWD build (experimental)
+
+The optional `HY0020_NO_BOOTLOADER=1` build removes the 0x74000-0x7FFFF
+Adafruit bootloader reservation. This first-stage change **does not move any
+pins**: UART REPL remains TX=P0.06/RX=P0.08, the reset-time REPL selector
+remains P0.12, and P0.20 is not repurposed yet.
+
+| Region | Standalone SWD range |
+| --- | --- |
+| S132 6.1.1 | 0x00000 - 0x25FFF |
+| MicroPython application | 0x26000 - 0x67FFF (264 KiB reserved) |
+| LFS2 | 0x68000 - 0x7FFFF (96 KiB) |
+| Adafruit bootloader | Not installed |
+
+The existing serial DFU build still uses the original 64 KiB LFS2 layout
+at 0x64000-0x73FFF. The standalone layout moves the filesystem start;
+**back up any files before changing images**. The first flash may need to
+format LFS2. The merged `hy0020-s132-micropython-swd.hex` contains the
+SoftDevice and application, but deliberately does not write the FS region.
+It does not preserve an old filesystem layout. A full-chip erase, when
+performed by the SWD programmer, also destroys all user files and any
+previous bootloader.
+
+CI builds both variants and publishes `fdk-hy0020-micropython-swd` alongside
+the existing DFU artifacts. Manual build after staging the BSP and applying
+the repository's MicroPython patches:
+
+```sh
+make -C micropython/ports/nrf BOARD=HY0020 SD=s132 \
+  HY0020_NO_BOOTLOADER=1 BUILD=build-HY0020-s132-standalone
+```
+
+Use an SWD probe (such as J-Link) to program the merged HEX. Serial
+Adafruit DFU cannot install the standalone firmware. After programming,\n**power-cycle** the module and verify with J-Link Commander\n`mem32 0x1000120C 1` (expected `FFFFFFFE`). Flash erases/recover\noperations can erase the UICR setting. Switching back to NFC mode requires\nerasing UICR first, which may require backing up and reflashing firmware and\nfilesystem. Do not connect an NFC antenna while using the GPIO configuration;\nNFC overvoltage protection is disabled.
+
+Hardware checks before merge: cold boot, P0.12 LOW/HIGH REPL/application
+modes, Issue #18 reset-time selector behavior, UART0 handoff,\nP0.09/P0.10 GPIO I2C scan after cold boot,
+`os.statvfs("/")` (24 x 4096-byte blocks), file write/read and reset
+persistence, BLE/S132 initialization, and bootloader-free SWD reflashing.
+CI validation is not a substitute for these physical board tests.
+
 ## Serial DFU artifact
 
 CI builds `firmware-dfu.zip` with SoftDevice requirement `0x00B7` (S132

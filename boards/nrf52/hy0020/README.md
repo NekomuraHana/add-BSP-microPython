@@ -8,6 +8,42 @@ can be installed through the Adafruit nRF52 bootloader, provide a UART REPL when
 requested at reset, and otherwise release the only hardware UART for normal
 MicroPython applications.
 
+## Board identity and firmware version
+
+The interpreter already exposes the board and MicroPython version:
+
+```python
+import os, sys
+print(os.uname().machine)
+print(sys.implementation.version)
+```
+
+This BSP also freezes `board_info` into both firmware variants, so software
+can identify the **firmware packaging** independently of flash layout:
+
+```python
+import board_info
+print(board_info.info())
+print(board_info.BSP_VERSION)
+print(board_info.FIRMWARE_VARIANT)
+print(board_info.HAS_BOOTLOADER)
+```
+
+| Field | Adafruit DFU build | Standalone SWD build |
+| --- | --- | --- |
+| `BOARD_ID` | `HY0020` | `HY0020` |
+| `BSP_VERSION` | `(0, 1, 0)` | `(0, 1, 0)` |
+| `FIRMWARE_VARIANT` | `adafruit-dfu` | `standalone-swd` |
+| `HAS_BOOTLOADER` | `True` | `False` |
+| `REPL_SELECT_PIN` | `P0_12` | `P0_20` |
+
+`BSP_VERSION` is a manually maintained software-version tuple and **not**
+the MicroPython interpreter version or physical PCB revision. The module
+returns `HARDWARE_REVISION = None` because the physical board revision
+cannot be reliably determined from software. These values identify the
+build configuration and are compiled into frozen modules, not guessed by
+inspecting runtime filesystem size or UICR.
+
 ## UART pin assignments and boot modes
 
 Both firmware variants use the pads outside the DIP20 footprint for the
@@ -97,7 +133,8 @@ real-device check.
 
 ## VS Code / MicroPico
 
-When using the **MicroPico** VS Code extension with HY0020's UART REPL\n(TX=P0.18, RX=P0.16),
+When using the **MicroPico** VS Code extension with HY0020's UART REPL
+(TX=P0.18, RX=P0.16),
 `Run Current File on Board` may fail when MicroPico performs a soft reset
 before execution. The extension may log
 `[RunCommand] Failed to execute script on Pico.` and reconnect the serial
@@ -151,7 +188,8 @@ perform a serial DFU update while recording whether user files survive.
 ## Standalone SWD build (experimental)
 
 The optional `HY0020_NO_BOOTLOADER=1` build removes the 0x74000-0x7FFFF
-Adafruit bootloader reservation. The standalone firmware sets the REPL selector to P0.20 while the\nbootloader-enabled firmware retains P0.12. Both use REPL TX=P0.18/RX=P0.16.
+Adafruit bootloader reservation. The standalone firmware sets the REPL selector to P0.20 while the
+bootloader-enabled firmware retains P0.12. Both use REPL TX=P0.18/RX=P0.16.
 
 | Region | Standalone SWD range |
 | --- | --- |
@@ -179,9 +217,17 @@ make -C micropython/ports/nrf BOARD=HY0020 SD=s132 \
 ```
 
 Use an SWD probe (such as J-Link) to program the merged HEX. Serial
-Adafruit DFU cannot install the standalone firmware. After programming,\n**power-cycle** the module and verify with J-Link Commander\n`mem32 0x1000120C 1` (expected `FFFFFFFE`). Flash erases/recover\noperations can erase the UICR setting. Switching back to NFC mode requires\nerasing UICR first, which may require backing up and reflashing firmware and\nfilesystem. Do not connect an NFC antenna while using the GPIO configuration;\nNFC overvoltage protection is disabled.
+Adafruit DFU cannot install the standalone firmware. After programming,
+**power-cycle** the module and verify with J-Link Commander
+`mem32 0x1000120C 1` (expected `FFFFFFFE`). Flash erases/recover
+operations can erase the UICR setting. Switching back to NFC mode requires
+erasing UICR first, which may require backing up and reflashing firmware and
+filesystem. Do not connect an NFC antenna while using the GPIO configuration;
+NFC overvoltage protection is disabled.
 
-Hardware checks before merge: cold boot, P0.12 LOW/HIGH modes on DFU\nfirmware and P0.20 LOW/HIGH modes on standalone firmware, UART0 handoff,\nP0.09/P0.10 GPIO I2C scan after cold boot,
+Hardware checks before merge: cold boot, P0.12 LOW/HIGH modes on DFU
+firmware and P0.20 LOW/HIGH modes on standalone firmware, UART0 handoff,
+P0.09/P0.10 GPIO I2C scan after cold boot,
 `os.statvfs("/")` (24 x 4096-byte blocks), file write/read and reset
 persistence, BLE/S132 initialization, and bootloader-free SWD reflashing.
 CI validation is not a substitute for these physical board tests.
@@ -204,8 +250,13 @@ The initial exposed-pin aliases are:
 
 `P0_02 P0_03 P0_04 P0_05 P0_06 P0_07 P0_08 P0_09 P0_10 P0_12 P0_16 P0_18 P0_20 P0_28 P0_30`
 
-P0.09/P0.10 are also NFC pins on nRF52832. The merged standalone SWD HEX\nconfigures UICR.NFCPINS for GPIO (NFC disabled). P0.20 is owned by the\nAdafruit bootloader as the DFU selector only in the bootloader-enabled build.
+P0.09/P0.10 are also NFC pins on nRF52832. The merged standalone SWD HEX
+configures UICR.NFCPINS for GPIO (NFC disabled). P0.20 is owned by the
+Adafruit bootloader as the DFU selector only in the bootloader-enabled build.
 
 ## Out of scope of the REPL pin relocation
 
-This change does not modify unhandled-exception logging, `print()` routing,\nor application-mode execution beyond the existing UART handoff. Those\nmanagement-mode design questions remain tracked in Issue #25. NFC remains\na separate future consideration in Issue #24.
+This change does not modify unhandled-exception logging, `print()` routing,
+or application-mode execution beyond the existing UART handoff. Those
+management-mode design questions remain tracked in Issue #25. NFC remains
+a separate future consideration in Issue #24.

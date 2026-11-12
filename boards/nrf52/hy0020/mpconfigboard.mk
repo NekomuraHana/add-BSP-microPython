@@ -9,7 +9,7 @@ LD_FILES += boards/nrf52832_512k_64k.ld
 # Match the Adafruit nRF52 bootloader memory map used by the Akizuki kit.
 HY0020_NO_BOOTLOADER ?= 0
 ifeq ($(HY0020_NO_BOOTLOADER),1)
-NRF_DEFINES += -DHY0020_NO_BOOTLOADER=1
+NRF_DEFINES += -DHY0020_NO_BOOTLOADER=1\nFROZEN_MANIFEST = $(BOARD_DIR)/manifest_standalone.py
 LD_FILES += $(BOARD_DIR)/hy0020_standalone.ld
 else
 LD_FILES += $(BOARD_DIR)/hy0020_adafruit_bootloader.ld

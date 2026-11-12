@@ -70,8 +70,13 @@ jobs:
              boards/nrf52/hy0020/hy0020_adafruit_bootloader.ld \
              boards/nrf52/hy0020/hy0020_standalone.ld \
              boards/nrf52/hy0020/manifest.py \
+             boards/nrf52/hy0020/manifest_standalone.py \
+             boards/nrf52/hy0020/board_info.py \
              boards/nrf52/hy0020/_boot.py \
              micropython/ports/nrf/boards/HY0020/
+          cp -r boards/nrf52/hy0020/variant_dfu \
+                boards/nrf52/hy0020/variant_standalone \
+                micropython/ports/nrf/boards/HY0020/
 
       - name: Download S132 SoftDevice
         working-directory: micropython

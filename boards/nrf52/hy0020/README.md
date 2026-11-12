@@ -8,41 +8,32 @@ can be installed through the Adafruit nRF52 bootloader, provide a UART REPL when
 requested at reset, and otherwise release the only hardware UART for normal
 MicroPython applications.
 
-## Board identity and firmware version
+## BSP version and firmware variant
 
-The interpreter already exposes the board and MicroPython version:
-
-```python
-import os, sys
-print(os.uname().machine)
-print(sys.implementation.version)
-```
-
-This BSP also freezes `board_info` into both firmware variants, so software
-can identify the **firmware packaging** independently of flash layout:
+Use the standard MicroPython APIs for board/interpreter information:
+`os.uname()` and `sys.implementation`. The small frozen `board_info`
+module exposes only HY0020 BSP-specific configuration:
 
 ```python
 import board_info
-print(board_info.info())
+
 print(board_info.BSP_VERSION)
 print(board_info.FIRMWARE_VARIANT)
-print(board_info.HAS_BOOTLOADER)
+print(board_info.REPL_SELECT_PIN)
+print(board_info.REPL_TX_PIN, board_info.REPL_RX_PIN)
 ```
 
 | Field | Adafruit DFU build | Standalone SWD build |
 | --- | --- | --- |
-| `BOARD_ID` | `HY0020` | `HY0020` |
 | `BSP_VERSION` | `(0, 1, 0)` | `(0, 1, 0)` |
-| `FIRMWARE_VARIANT` | `adafruit-dfu` | `standalone-swd` |
-| `HAS_BOOTLOADER` | `True` | `False` |
-| `REPL_SELECT_PIN` | `P0_12` | `P0_20` |
+| `FIRMWARE_VARIANT` | `"adafruit-dfu"` | `"standalone-swd"` |
+| `REPL_SELECT_PIN` | `"P0_12"` | `"P0_20"` |
+| `REPL_TX_PIN` | `"P0_18"` | `"P0_18"` |
+| `REPL_RX_PIN` | `"P0_16"` | `"P0_16"` |
 
-`BSP_VERSION` is a manually maintained software-version tuple and **not**
-the MicroPython interpreter version or physical PCB revision. The module
-returns `HARDWARE_REVISION = None` because the physical board revision
-cannot be reliably determined from software. These values identify the
-build configuration and are compiled into frozen modules, not guessed by
-inspecting runtime filesystem size or UICR.
+The software-maintained `BSP_VERSION` is separate from the MicroPython
+interpreter version. `FIRMWARE_VARIANT` is selected at build time by the
+frozen manifest; it is not guessed from filesystem size or UICR.
 
 ## UART pin assignments and boot modes
 

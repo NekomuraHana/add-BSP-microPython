@@ -1,0 +1,56 @@
+diff --git a/shared/runtime/pyexec.c b/shared/runtime/pyexec.c
+--- a/shared/runtime/pyexec.c
++++ b/shared/runtime/pyexec.c
+@@ -42,6 +42,11 @@
+ 
+ pyexec_mode_kind_t pyexec_mode_kind = PYEXEC_MODE_FRIENDLY_REPL;
+ 
++// HY0020: only main.py in user mode is eligible for persistent error logging.
++#if defined(MICROPY_HW_UART_REPL_SELECT_PIN)
++static bool hy0020_user_main_active = false;
++#endif
++
+ #if MICROPY_REPL_INFO
+ static bool repl_display_debugging_info = 0;
+ #endif
+@@ -184,7 +189,23 @@
+             ret = PYEXEC_FORCED_EXIT;
+             #endif
+         } else { // other exception
++            #if defined(MICROPY_HW_UART_REPL_SELECT_PIN)
++            if (hy0020_user_main_active) {
++                // Keep the exception object/traceback before pyexec returns.
++                // The frozen logger swallows its own FS errors; protect import too.
++                nlr_buf_t log_nlr;
++                if (nlr_push(&log_nlr) == 0) {
++                    mp_obj_t mod = mp_import_name(MP_QSTR__hy0020_errorlog, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
++                    mp_obj_t fun = mp_load_attr(mod, MP_QSTR_log_exception);
++                    mp_call_function_1(fun, MP_OBJ_FROM_PTR(nlr.ret_val));
++                    nlr_pop();
++                }
++            } else {
++                mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
++            }
++            #else
+             mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
++            #endif
+             ret = PYEXEC_UNHANDLED_EXCEPTION;
+             #if MICROPY_PYEXEC_ENABLE_EXIT_CODE_HANDLING
+             if (mp_obj_is_subclass_fast(MP_OBJ_FROM_PTR(((mp_obj_base_t *)nlr.ret_val)->type), MP_OBJ_FROM_PTR(&mp_type_KeyboardInterrupt))) { // keyboard interrupt
+@@ -752,6 +773,16 @@
+     return pyexec_file(filename);
+ }
+ 
++#if defined(MICROPY_HW_UART_REPL_SELECT_PIN)
++// Run main.py with normal pyexec semantics, logging only its uncaught errors.
++int hy0020_run_user_main(void) {
++    hy0020_user_main_active = true;
++    int result = pyexec_file_if_exists("main.py");
++    hy0020_user_main_active = false;
++    return result;
++}
++#endif
++
+ #if MICROPY_MODULE_FROZEN
+ int pyexec_frozen_module(const char *name, bool allow_keyboard_interrupt) {
+     void *frozen_data;

@@ -1,19 +1,20 @@
 diff --git a/ports/nrf/main.c b/ports/nrf/main.c
 --- a/ports/nrf/main.c
 +++ b/ports/nrf/main.c
-@@ -105,6 +105,11 @@
+@@ -105,6 +105,12 @@
      }
  }
  
 +// HY0020: return UART0 ownership to the startup selector after boot.py.
 +#if defined(MICROPY_HW_UART_REPL_SELECT_PIN)
 +extern void uart_boot_script_release(uint32_t timeout_ms);
++extern int hy0020_run_user_main(void);
 +#endif
 +
  extern uint32_t _heap_start;
  extern uint32_t _heap_end;
  
-@@ -115,6 +120,17 @@
+@@ -115,6 +121,17 @@
  
      MICROPY_BOARD_EARLY_INIT();
  
@@ -31,7 +32,7 @@ diff --git a/ports/nrf/main.c b/ports/nrf/main.c
  soft_reset:
  
      #if MICROPY_PY_TIME_TICKS
-@@ -162,17 +178,6 @@
+@@ -162,17 +179,6 @@
      uart_init0();
      #endif
  
@@ -49,7 +50,7 @@ diff --git a/ports/nrf/main.c b/ports/nrf/main.c
      pin_init0();
  
      #if MICROPY_HW_ENABLE_INTERNAL_FLASH_STORAGE
-@@ -249,12 +254,37 @@
+@@ -249,12 +255,37 @@
      ret_code = pyexec_file_if_exists("boot.py");
      #endif
  

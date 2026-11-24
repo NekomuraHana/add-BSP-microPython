@@ -77,6 +77,45 @@ from machine import Pin, UART
 uart = UART(0, 115200, tx=Pin("P0_06"), rx=Pin("P0_08"))
 ```
 
+## User-mode uncaught exception log
+
+When the reset-time selector chooses **application mode**, an exception that
+escapes `main.py` is saved to `/error.log` with its MicroPython traceback.
+Only the **most recent uncaught exception** is retained: the next error opens
+the file with mode `"w"` and replaces the previous contents.
+
+- Exceptions caught by user code (`try/except`) are not recorded.
+- `print()` output is not written to the log.
+- REPL-mode exceptions keep their normal interactive behavior and do not
+  automatically write `error.log`.
+- `boot.py` and startup failures are outside this first implementation.
+- A normal run does **not** remove a previous error log; delete it manually
+  after collecting diagnostics if needed.
+- File errors (full/unmounted/read-only filesystem) are ignored to avoid
+  cascading exceptions. Logging is best effort, not a guaranteed crash dump.
+- `SystemExit` is treated as a normal exit; `KeyboardInterrupt` is excluded
+  by the logger as well.
+
+To verify, install a `main.py` containing:
+
+```python
+print("Application startup")
+raise ValueError("HY0020 test exception")
+```
+
+Select application mode and reset the board. Then enter REPL mode with the
+hardware selector, and inspect the saved traceback:
+
+```python
+with open("/error.log") as f:
+    print(f.read())
+```
+
+A second distinct uncaught exception should replace the first log.
+A handled exception should not alter it. Do not expect ordinary `print()`
+output to appear in the file. The logger is deliberately limited to the
+HY0020 startup path, not a global interception of all callbacks/interrupts.
+
 ## SPI/I2C soft reset cleanup
 
 On a MicroPython Ctrl+D soft reboot, `spi_init0()` and `i2c_init0()`

@@ -14,6 +14,7 @@ on:
       - "patches/micropython/nrf-ble-declaration-handle.patch"
       - "patches/micropython/nrf-spi-i2c-resource-management.patch"
       - "patches/micropython/nrf-early-uart-repl-select.patch"
+      - "patches/micropython/nrf-hy0020-unhandled-errorlog.patch"
       - "micropython"
 
   push:
@@ -29,6 +30,7 @@ on:
       - "patches/micropython/nrf-ble-declaration-handle.patch"
       - "patches/micropython/nrf-spi-i2c-resource-management.patch"
       - "patches/micropython/nrf-early-uart-repl-select.patch"
+      - "patches/micropython/nrf-hy0020-unhandled-errorlog.patch"
       - "micropython"
 
 jobs:
@@ -50,6 +52,8 @@ jobs:
           git apply ../patches/micropython/nrf-ble-raw-uuid.patch
           git apply ../patches/micropython/nrf-ble-declaration-handle.patch
           git apply ../patches/micropython/nrf-early-uart-repl-select.patch
+          git apply --check ../patches/micropython/nrf-hy0020-unhandled-errorlog.patch
+          git apply ../patches/micropython/nrf-hy0020-unhandled-errorlog.patch
           git apply --check ../patches/micropython/nrf-spi-i2c-resource-management.patch
           git apply ../patches/micropython/nrf-spi-i2c-resource-management.patch
 
@@ -72,6 +76,7 @@ jobs:
              boards/nrf52/hy0020/manifest.py \
              boards/nrf52/hy0020/manifest_standalone.py \
              boards/nrf52/hy0020/board_info.py \
+             boards/nrf52/hy0020/_hy0020_errorlog.py \
              boards/nrf52/hy0020/_boot.py \
              micropython/ports/nrf/boards/HY0020/
           cp -r boards/nrf52/hy0020/variant_dfu \

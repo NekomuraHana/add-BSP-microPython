@@ -2,7 +2,7 @@
  * MicroPython board definition for the Akizuki AE-HY0020-DIP kit.
  *
  * HY0020 uses an nRF52832 (512 KiB Flash / 64 KiB RAM).  The Akizuki kit
- * ships with an Adafruit nRF52 bootloader and exposes UART on P0.06/P0.08.
+ * ships with an Adafruit nRF52 bootloader (DFU UART: P0.06/P0.08).
  */
 
 #define MICROPY_HW_BOARD_NAME        "Akizuki AE-HY0020-DIP"
@@ -21,7 +21,13 @@
 
 // nRF52832 has no native USB peripheral.  The console uses UART0.
 #define MICROPY_HW_ENABLE_USBDEV     (0)
+#if defined(HY0020_NO_BOOTLOADER) && HY0020_NO_BOOTLOADER
+// P0.20 is available only after removing the Adafruit bootloader.
+#define MICROPY_HW_UART_REPL_SELECT_PIN (20)
+#else
+// P0.20 remains the active-low DFU selector on bootloader-enabled builds.
 #define MICROPY_HW_UART_REPL_SELECT_PIN (12)
+#endif
 #define MICROPY_HW_ENABLE_UART_REPL  (1)
 #define MICROPY_HW_UART_REPL         (0)
 #define MICROPY_HW_UART_REPL_BAUD    (115200)
@@ -29,11 +35,12 @@
 // nRF52832 provides one UARTE/UART hardware instance.
 #define MICROPY_HW_UART_COUNT        (1)
 
-// Akizuki/Adafruit bootloader wiring.
+// REPL UART0 uses the pads outside the DIP20 footprint in both FW variants.
+// The Adafruit bootloader (when installed) still uses P0.06/P0.08 for DFU.
 // MicroPython calls this board-default mapping UART1 internally, while the
 // Python-facing peripheral is machine.UART(0).
-#define MICROPY_HW_UART1_TX          (6)
-#define MICROPY_HW_UART1_RX          (8)
+#define MICROPY_HW_UART1_TX          (18)
+#define MICROPY_HW_UART1_RX          (16)
 #define MICROPY_HW_UART1_HWFC        (0)
 
 // Build-time SPI defaults (all brought out on the Akizuki carrier).

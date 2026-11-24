@@ -8,44 +8,73 @@ can be installed through the Adafruit nRF52 bootloader, provide a UART REPL when
 requested at reset, and otherwise release the only hardware UART for normal
 MicroPython applications.
 
-## Assumptions
+## BSP version and firmware variant
 
-- MCU: nRF52832, 512 KiB Flash / 64 KiB RAM.
-- SoftDevice: S132 6.1.1.
-- Bootloader: Adafruit nRF52 bootloader already installed on the Akizuki kit.
-- Bootloader UART wiring: TX=P0.06, RX=P0.08.
-- P0.20 remains the Adafruit/Akizuki active-low DFU input.
-- P0.12 is used only by this initial MicroPython BSP as the REPL-mode selector.
+Use the standard MicroPython APIs for board/interpreter information:
+`os.uname()` and `sys.implementation`. The small frozen `board_info`
+module exposes only HY0020 BSP-specific configuration:
 
-## REPL mode selection
+```python
+import board_info
 
-Immediately after reset, the native nRF startup code enables the P0.12
-pull-up and **latches the pin level once**, before initializing the Python VM.
-Both modes execute frozen `_boot.py` and filesystem `boot.py` **before** the mode-specific UART handoff. `boot.py` can configure and use UART0 with any supported pins and baud rate. After `boot.py` returns, the firmware waits up to **50 ms** for any UART0 TX in progress to complete, then uninitializes UART0 regardless of how `boot.py` configured it. If TX is still active at the deadline, the UART is nevertheless uninitialized (the remaining bytes may be lost).
+print(board_info.BSP_VERSION)
+print(board_info.FIRMWARE_VARIANT)
+print(board_info.REPL_SELECT_PIN)
+print(board_info.REPL_TX_PIN, board_info.REPL_RX_PIN)
+```
 
-- **P0.12 LOW**: after that handoff, initialize UART0 as the 115200-bps REPL on TX=P0.06 / RX=P0.08 and **skip `main.py`**.
-- **P0.12 HIGH** (internal pull-up/default): leave UART0 uninitialized for the application, execute `main.py`, and **do not connect the user's UART to REPL**.
+| Field | Adafruit DFU build | Standalone SWD build |
+| --- | --- | --- |
+| `BSP_VERSION` | `(0, 1, 0)` | `(0, 1, 0)` |
+| `FIRMWARE_VARIANT` | `"adafruit-dfu"` | `"standalone-swd"` |
+| `REPL_SELECT_PIN` | `"P0_12"` | `"P0_20"` |
+| `REPL_TX_PIN` | `"P0_18"` | `"P0_18"` |
+| `REPL_RX_PIN` | `"P0_16"` | `"P0_16"` |
 
-If `boot.py` hangs or never returns, the UART handoff and REPL cannot occur; this mode is not a guaranteed recovery path for a broken `boot.py`.
+The software-maintained `BSP_VERSION` is separate from the MicroPython
+interpreter version. `FIRMWARE_VARIANT` is selected at build time by the
+frozen manifest; it is not guessed from filesystem size or UICR.
 
-For maintenance/debugging, hold the P0.12 switch LOW, assert reset, release
-reset, then release the P0.12 switch.  The REPL remains active for that boot.
+## UART pin assignments and boot modes
 
-Changing P0.12 after reset no longer changes the selected mode; another hardware
-reset is required. This avoids a race against MicroPython's Python-level startup.
+Both firmware variants use the pads outside the DIP20 footprint for the
+**MicroPython UART REPL**: TX=P0.18, RX=P0.16 (115200 bps).
+These are the MCU's TX/RX directions; cross them when connecting a USB-UART
+adapter. Bootloader-enabled DFU **still uses TX=P0.06, RX=P0.08** independently.
 
-In normal mode, `machine.UART(0)` is free for application use after the boot-script handoff, even when `boot.py` previously used a different UART0 pin/baud mapping.  The repository's
-existing nRF UART pin-selection patch allows alternate pins, for example:
+| Function | Adafruit UART DFU firmware | Standalone SWD firmware |
+| --- | --- | --- |
+| MicroPython REPL TX / RX | P0.18 / P0.16 | P0.18 / P0.16 |
+| Reset-time REPL selector | P0.12 (LOW) | P0.20 (LOW) |
+| Selector HIGH / floating | Run main.py | Run main.py |
+| Bootloader serial DFU | P0.06 / P0.08, P0.20 LOW at boot | Unavailable |
+| P0.12 | REPL selector | Ordinary GPIO |
+| P0.20 | Adafruit DFU selector | REPL selector |
+
+The selection pin is pulled up and sampled once during the MicroPython startup:
+hold it LOW while resetting to enter UART REPL and skip `main.py`. Hold it
+HIGH (or leave it floating) to run `main.py` without attaching REPL to
+UART0. Because the Adafruit bootloader runs before MicroPython, the DFU build
+cannot guarantee selection precisely at the external reset edge; see Issue #18.
+
+Both modes run frozen `_boot.py` and filesystem `boot.py` before UART handoff.
+`boot.py` can use UART0 with any supported pins/baud. Upon its return,
+the firmware waits up to 50 ms for ongoing UART transmission and then
+uninitializes UART0; remaining bytes may be lost if the deadline expires.
+When REPL is selected UART0 is subsequently attached using P0.18/P0.16.
+Otherwise UART0 is available for `main.py`, including on other pins.
+
+**Important:** A hanging `boot.py` can still prevent entering REPL, so the
+mode selector alone does not guarantee recovery from broken boot code.
+A Ctrl+D soft reset does not re-sample the hardware selector; power-cycle or
+hardware-reset to choose a different mode.
+
+Example of user-mode UART0 configuration (independent of the default REPL pins):
 
 ```python
 from machine import Pin, UART
 
-uart = UART(
-    0,
-    115200,
-    tx=Pin("P0_18"),
-    rx=Pin("P0_16"),
-)
+uart = UART(0, 115200, tx=Pin("P0_06"), rx=Pin("P0_08"))
 ```
 
 ## SPI/I2C soft reset cleanup
@@ -89,13 +118,14 @@ not establish SPI0/TWI0 correctness.
 
 **Remaining UART handoff hardware check:** put a UART0 transmission in
 `boot.py`, verify that it completes, and verify REPL mode can reconnect
-using TX=P0.06/RX=P0.08 while normal mode's `main.py` can reconfigure
+using TX=P0.18/RX=P0.16 while normal mode's `main.py` can reconfigure
 UART0 with different pins and baud. A successful build does not replace this
 real-device check.
 
 ## VS Code / MicroPico
 
-When using the **MicroPico** VS Code extension with HY0020's UART REPL,
+When using the **MicroPico** VS Code extension with HY0020's UART REPL
+(TX=P0.18, RX=P0.16),
 `Run Current File on Board` may fail when MicroPico performs a soft reset
 before execution. The extension may log
 `[RunCommand] Failed to execute script on Pico.` and reconnect the serial
@@ -149,9 +179,8 @@ perform a serial DFU update while recording whether user files survive.
 ## Standalone SWD build (experimental)
 
 The optional `HY0020_NO_BOOTLOADER=1` build removes the 0x74000-0x7FFFF
-Adafruit bootloader reservation. This first-stage change **does not move any
-pins**: UART REPL remains TX=P0.06/RX=P0.08, the reset-time REPL selector
-remains P0.12, and P0.20 is not repurposed yet.
+Adafruit bootloader reservation. The standalone firmware sets the REPL selector to P0.20 while the
+bootloader-enabled firmware retains P0.12. Both use REPL TX=P0.18/RX=P0.16.
 
 | Region | Standalone SWD range |
 | --- | --- |
@@ -179,10 +208,17 @@ make -C micropython/ports/nrf BOARD=HY0020 SD=s132 \
 ```
 
 Use an SWD probe (such as J-Link) to program the merged HEX. Serial
-Adafruit DFU cannot install the standalone firmware. After programming,\n**power-cycle** the module and verify with J-Link Commander\n`mem32 0x1000120C 1` (expected `FFFFFFFE`). Flash erases/recover\noperations can erase the UICR setting. Switching back to NFC mode requires\nerasing UICR first, which may require backing up and reflashing firmware and\nfilesystem. Do not connect an NFC antenna while using the GPIO configuration;\nNFC overvoltage protection is disabled.
+Adafruit DFU cannot install the standalone firmware. After programming,
+**power-cycle** the module and verify with J-Link Commander
+`mem32 0x1000120C 1` (expected `FFFFFFFE`). Flash erases/recover
+operations can erase the UICR setting. Switching back to NFC mode requires
+erasing UICR first, which may require backing up and reflashing firmware and
+filesystem. Do not connect an NFC antenna while using the GPIO configuration;
+NFC overvoltage protection is disabled.
 
-Hardware checks before merge: cold boot, P0.12 LOW/HIGH REPL/application
-modes, Issue #18 reset-time selector behavior, UART0 handoff,\nP0.09/P0.10 GPIO I2C scan after cold boot,
+Hardware checks before merge: cold boot, P0.12 LOW/HIGH modes on DFU
+firmware and P0.20 LOW/HIGH modes on standalone firmware, UART0 handoff,
+P0.09/P0.10 GPIO I2C scan after cold boot,
 `os.statvfs("/")` (24 x 4096-byte blocks), file write/read and reset
 persistence, BLE/S132 initialization, and bootloader-free SWD reflashing.
 CI validation is not a substitute for these physical board tests.
@@ -205,17 +241,13 @@ The initial exposed-pin aliases are:
 
 `P0_02 P0_03 P0_04 P0_05 P0_06 P0_07 P0_08 P0_09 P0_10 P0_12 P0_16 P0_18 P0_20 P0_28 P0_30`
 
-P0.09/P0.10 are also NFC pins on nRF52832 and need separate verification before
-treating them as unrestricted GPIO.  P0.20 is owned by the Adafruit bootloader
-as the DFU selector while the bootloader is retained.
+P0.09/P0.10 are also NFC pins on nRF52832. The merged standalone SWD HEX
+configures UICR.NFCPINS for GPIO (NFC disabled). P0.20 is owned by the
+Adafruit bootloader as the DFU selector only in the bootloader-enabled build.
 
-## Initial-scope limits
+## Out of scope of the REPL pin relocation
 
-This revision does **not** yet:
-
-- move REPL TX/RX to P0.18/P0.16,
-- provide a bootloader-free SWD image,
-- verify every UART/I2C/SPI/PWM/ADC pin combination on hardware,
-- change P0.20 away from its bootloader DFU role.
-
-Those are follow-up items after the first firmware is proven on the real board.
+This change does not modify unhandled-exception logging, `print()` routing,
+or application-mode execution beyond the existing UART handoff. Those
+management-mode design questions remain tracked in Issue #25. NFC remains
+a separate future consideration in Issue #24.

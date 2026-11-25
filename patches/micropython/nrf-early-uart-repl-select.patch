@@ -50,7 +50,7 @@ diff --git a/ports/nrf/main.c b/ports/nrf/main.c
      pin_init0();
  
      #if MICROPY_HW_ENABLE_INTERNAL_FLASH_STORAGE
-@@ -249,12 +255,37 @@
+@@ -249,12 +255,41 @@
      ret_code = pyexec_file_if_exists("boot.py");
      #endif
  
@@ -85,7 +85,11 @@ diff --git a/ports/nrf/main.c b/ports/nrf/main.c
 +    #else
      if (pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL && ret_code != 0) {
 +    #endif
++        #if defined(MICROPY_HW_UART_REPL_SELECT_PIN)
++        hy0020_run_user_main();
++        #else
          pyexec_file_if_exists("main.py");
++        #endif
      }
      #endif
 diff --git a/ports/nrf/modules/machine/uart.c b/ports/nrf/modules/machine/uart.c

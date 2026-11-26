@@ -15,6 +15,7 @@
 | ID | Module | SoC | Backend | Status |
 | --- | --- | --- | --- | --- |
 | `isp1807` | Insight SiP ISP1807-LR | nRF52840 | MicroPython nrf | Initial BSP |
+| `hy0020` | FDK HY0020 / Akizuki AE-HY0020-DIP | nRF52832 | MicroPython nrf | Initial BSP |
 
 ## Build
 

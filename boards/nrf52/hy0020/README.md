@@ -12,7 +12,7 @@ MicroPython applications.
 
 Pushing a version tag matching `HY0020-V*` triggers the HY0020 build and
 publishes a GitHub Release after both firmware builds and checksum checks
-succeed. For example, `HY0020-V0.1.0` (choose the actual release version
+succeed. For example, `HY0020-V0.2.0` (choose the actual release version
 before tagging). ISP1807 uses its own separate tag prefix.
 
 Release assets:
@@ -43,7 +43,7 @@ print(board_info.REPL_TX_PIN, board_info.REPL_RX_PIN)
 
 | Field | Adafruit DFU build | Standalone SWD build |
 | --- | --- | --- |
-| `BSP_VERSION` | `(0, 1, 0)` | `(0, 1, 0)` |
+| `BSP_VERSION` | `(0, 2, 0)` | `(0, 2, 0)` |
 | `FIRMWARE_VARIANT` | `"adafruit-dfu"` | `"standalone-swd"` |
 | `REPL_SELECT_PIN` | `"P0_12"` | `"P0_20"` |
 | `REPL_TX_PIN` | `"P0_18"` | `"P0_18"` |

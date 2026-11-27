@@ -19,6 +19,10 @@
 
 #define MICROPY_HW_ENABLE_RNG        (1)
 
+// Enable deferred Python callbacks without changing the ROM feature level.
+#define MICROPY_ENABLE_SCHEDULER     (1)
+#define MICROPY_SCHEDULER_DEPTH      (4)
+
 // nRF52832 has no native USB peripheral.  The console uses UART0.
 #define MICROPY_HW_ENABLE_USBDEV     (0)
 #if defined(HY0020_NO_BOOTLOADER) && HY0020_NO_BOOTLOADER

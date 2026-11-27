@@ -8,6 +8,24 @@ can be installed through the Adafruit nRF52 bootloader, provide a UART REPL when
 requested at reset, and otherwise release the only hardware UART for normal
 MicroPython applications.
 
+## Firmware releases
+
+Pushing a version tag matching `HY0020-V*` triggers the HY0020 build and
+publishes a GitHub Release after both firmware builds and checksum checks
+succeed. For example, `HY0020-V0.1.0` (choose the actual release version
+before tagging). ISP1807 uses its own separate tag prefix.
+
+Release assets:
+
+- `fdk-hy0020-micropython-dfu.zip`: serial DFU for the installed Adafruit bootloader.
+- `fdk-hy0020-micropython-swd.hex`: standalone SWD/J-Link image with S132 and MicroPython.
+- `SHA256SUMS.txt`: checksums; verify from the download directory with `sha256sum -c SHA256SUMS.txt`.
+
+Keep the DFU ZIP intact. For SWD installation, back up any existing files
+and follow the standalone programming/erase instructions below.
+Normal pull requests build and package the release assets for verification
+but do not publish a release.
+
 ## BSP version and firmware variant
 
 Use the standard MicroPython APIs for board/interpreter information:

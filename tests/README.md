@@ -74,6 +74,15 @@ A host tool's "run current file" may or may not trigger a soft reset; use a
 visible Ctrl+D REPL reboot for this test. A normal hardware reset also clears
 the peripheral but is **not** sufficient proof of soft-reset cleanup.
 
+## HY0020 scheduler smoke test
+
+Run `tests/common/scheduler_test.py` on both DFU and standalone firmware.
+No external wiring is required; Timer4 must be unused. The test checks VM
+scheduling and periodic Timer IRQ deferred callbacks, including large integer
+allocation in the deferred callback. Repeat after Ctrl+D soft reset. Also
+check BLE scan and scheduler coexistence, and compare flash/RAM usage against
+main before merging. These additional checks are manual.
+
 ## Board notes
 - ISP1807: REPL uses native USB CDC, so hardware UART0 is available for tests.
   SHT31 example wiring previously tested: SCL=P0.26, SDA=P0.14.
